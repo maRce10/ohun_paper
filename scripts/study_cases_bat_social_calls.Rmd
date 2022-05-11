@@ -1,0 +1,337 @@
+---
+title: <center><font size="6"><b>Ohun</b></font></center>
+subtitle: <center><font size="4"><b>Study cases</b></font></center>
+author: <center><font size="4"><a href="http://marceloarayasalas.weebly.com/">Marcelo Araya-Salas</a> & <a href="http:///">Gloriana Chaverri</a></font></center>
+date: <center>`r format(Sys.Date(), "%d-%m-%Y")`</center>
+output:
+  html_document:
+    theme: default
+    highlight: pygments
+    code_folding: hide
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+fontsize: 12pt 
+editor_options: 
+  chunk_output_type: console
+---
+
+## Load packages
+```{r packages, message=FALSE, warning = FALSE, echo = TRUE, eval = TRUE, include = TRUE}
+
+## add 'developer/' to packages to be installed from github
+x <- c("pbapply", "viridis", "knitr", "remotes", "maRce10/warbleR", "maRce10/ohun", "DT", "ranger")
+
+aa <- lapply(x, function(y) {
+  
+  # get pakage name
+  pkg <- strsplit(y, "/")[[1]]
+  pkg <- pkg[length(pkg)]
+  
+  # check if installed, if not then install 
+  if (!pkg %in% installed.packages()[,"Package"])  {
+
+      if (grepl("/", y))  remotes::install_github(y, force = TRUE) else
+    install.packages(y) 
+    }
+
+  # load package
+  try(require(pkg, character.only = T), silent = T)
+})
+
+```
+
+```{r set knitting options,  eval = TRUE, echo = FALSE}
+
+opts_knit$set(dpi = 100, fig.width = 12, warning = FALSE, root.dir = "..", fig.align = 'center', message = FALSE)
+
+```
+
+## Set functions and global parameters
+```{r functions, eval = TRUE, echo = TRUE}
+
+cols <- viridis(10, alpha = 0.6)
+
+warbleR_options(wav.path = "./data/raw")
+
+```
+
+# Bat calls data
+
+## File descriptions
+
+manual_detections_Raven_bats4testing.csv: Manual detection of all visible bat vocalizations (Raven)
+
+manual_detections_bats4testing.csv: Manual detection of all high quality bat vocalizations (Avisoft)
+
+automated_detections_bats4testing.csv: Automated detection with Eric's function
+
+# Read data
+```{r}
+
+reference_all <- read.csv("./data/raw/manual_detections_Raven_bats4testing.csv")
+
+reference_best <- read.csv("./data/raw/manual_detections_bats4testing.csv")
+
+ericks_detection <- read.csv("./data/raw/automated_detections_bats4testing.csv")
+
+```
+
+# Check references
+
+Exhaustive detection (all signals) 
+```{r}
+# all
+check_sels(reference_all, pb = FALSE)
+feature_reference(reference_all, path = "./data/raw")
+```
+
+High quality subset
+```{r}
+
+check_sels(reference_best, pb = FALSE)
+feature_reference(reference_best, path = "./data/raw")
+```
+
+Detection from Erick's algorithm
+```{r}
+
+check_sels(ericks_detection, pb = FALSE)
+feature_reference(ericks_detection, path = "./data/raw")
+
+```
+
+
+# Compare references (high quality vs exhaustive)
+
+```{r}
+
+# all vs best
+diagnose_detection(reference = reference_all, detection = reference_best)
+
+
+```
+&nbsp;
+
+<div class="alert alert-info">
+
+- *High quality reference has ~70% of all signals*
+
+</div>
+
+&nbsp;
+
+# Diagnose Erick's detection
+
+Compare to exhaustive detection:
+
+```{r}
+
+diagnose_detection(reference = reference_all, detection = ericks_detection)
+
+```
+&nbsp;
+
+<div class="alert alert-info">
+
+- *Erick's algorithm detected ~50% of all signals*
+- *44% of the detected signals were noise (no bat calls)*
+
+</div>
+
+&nbsp;
+
+Compare to high quality subset:
+
+```{r}
+
+diagnose_detection(reference = reference_best, detection = ericks_detection)
+
+```
+&nbsp;
+
+<div class="alert alert-info">
+
+- *Erick's algorithm detected ~70% of high quality signals*
+- *43% of the detected signals were noise (no bat calls)*
+
+</div>
+
+&nbsp;
+
+# Run ohun energy detector
+
+```{r, eval = FALSE}
+
+ohun_opt_detec <- optimize_energy_detector(reference = reference_best, threshold = c(0.5, 1:4), smooth = 1:4, hold.time = 1:8, min.duration = c(0.05, 0.1, 0.2, 0.3, 0.4, 1, 2), max.duration = c(30, 40, 50), parallel = 10, path = "./data/raw", bp = c(5, 100))
+
+saveRDS(ohun_opt_detec, "./data/processed/high_quality_reference_optimization.RDS")
+
+
+ohun_opt_detec_all <- optimize_energy_detector(reference = reference_all, threshold = c(0.5, 1:4), smooth = 1:4, hold.time = 1:8, min.duration = c(0.05, 0.1, 0.2, 0.3, 0.4, 1, 2), max.duration = c(30, 40, 50), parallel = 10, path = "./data/raw", bp = c(5, 100))
+
+saveRDS(ohun_opt_detec_all, "./data/processed/all_calls_reference_optimization.RDS")
+
+
+ohun_opt_detec_ericks <- optimize_energy_detector(reference = ericks_detection, threshold = c(0.5, 1:4), smooth = 1:4, hold.time = 1:8, min.duration = c(0.05, 0.1, 0.2, 0.3, 0.4, 1, 2), max.duration = c(30, 40, 50), parallel = 10, path = "./data/raw", bp = c(5, 100))
+
+saveRDS(ohun_opt_detec_ericks, "./data/processed/ericks_reference_optimization.RDS")
+
+```
+
+# ohun detection performance
+
+Compare to exhaustive reference (only the highest sensitivity iteration is shown)
+```{r}
+
+ohun_opt_detec_all <- readRDS("./data/processed/all_calls_reference_optimization.RDS")
+
+ohun_opt_detec_all <- ohun_opt_detec_all[which.max(ohun_opt_detec_all$sensitivity), c(1:11, 17:18)]
+
+ohun_opt_detec_all
+# oa_DT <- datatable(ohun_opt_detec_all, editable = list(
+#   target = 'row'
+# ), rownames = FALSE, style = "bootstrap",  filter = 'top', options = list(
+#   pageLength = 100, autoWidth = TRUE, dom = 'ft'
+# ), autoHideNavigation = TRUE, escape = FALSE)
+# 
+# formatRound(table = oa_DT, columns = sapply(ohun_opt_detec_all, is.numeric), 3)
+
+```
+&nbsp;
+
+<div class="alert alert-info">
+
+- *Optimized ohun detection got ~70% of all signals*
+- *24% of the detected signals were noise (no bat calls)*
+
+</div>
+
+&nbsp;
+
+Compare to high quality reference (only the highest sensitivity iteration is shown)
+```{r}
+
+ohun_opt_detec <- readRDS("./data/processed/high_quality_reference_optimization.RDS")
+
+ohun_opt_detec <- ohun_opt_detec[which.max(ohun_opt_detec$sensitivity), c(1:11, 17:18)]
+
+ohun_opt_detec
+# oa_DT <- datatable(ohun_opt_detec, editable = list(
+#   target = 'row'
+# ), rownames = FALSE, style = "bootstrap",  filter = 'top', options = list(
+#   pageLength = 100, autoWidth = TRUE, dom = 'ft'
+# ), autoHideNavigation = TRUE, escape = FALSE)
+# 
+# formatRound(table = oa_DT, columns = sapply(ohun_opt_detec, is.numeric), 3)
+
+```
+&nbsp;
+
+<div class="alert alert-info">
+
+- *Optimized ohun detection got ~74% of high quality signals*
+- *32% of the detected signals were noise (no bat calls)*
+
+</div>
+
+&nbsp;
+
+Compare to Erick's detection (only the highest sensitivity iteration is shown)
+```{r}
+
+ohun_opt_detec_ericks <- readRDS("./data/processed/ericks_reference_optimization.RDS")
+
+ohun_opt_detec_ericks <- ohun_opt_detec_ericks[which.max(ohun_opt_detec_ericks$sensitivity), c(1:11, 17:18)]
+
+ohun_opt_detec_ericks
+# oa_DT <- datatable(ohun_opt_detec_ericks, editable = list(
+#   target = 'row'
+# ), rownames = FALSE, style = "bootstrap",  filter = 'top', options = list(
+#   pageLength = 100, autoWidth = TRUE, dom = 'ft'
+# ), autoHideNavigation = TRUE, escape = FALSE)
+# 
+# formatRound(table = oa_DT, columns = sapply(ohun_opt_detec_ericks, is.numeric), 3)
+
+```
+&nbsp;
+
+<div class="alert alert-info">
+
+- *Optimized ohun detection got ~71% of signals detected by Erick's algorithm*
+- *31% of the detected signals were noise (no bat calls)*
+
+</div>
+
+&nbsp;
+
+# Filter using Random Forest
+
+Before random forest filtering
+```{r, eval = TRUE}
+# best parameters from all signal optimization
+ohun_detec <- energy_detector(threshold = 1, smooth = 1, hold.time = 1, min.duration = 0.1, max.duration = 50, parallel = 10, path = "./data/raw", bp = c(5, 100), pb = FALSE)
+
+
+diagnose_detection(reference_all, ohun_detec)
+```
+
+After random forest filtering
+```{r, eval = TRUE}
+ohun_detec <- label_detection(reference = reference_all, detection = ohun_detec, pb = FALSE)
+
+# measure spectrographic parameters
+spectral_parameters <- spectro_analysis(ohun_detec, bp = c(5, 100), fast = TRUE, ovlp = 70, parallel = 10, pb = FALSE)
+
+spectral_parameters$SNR <- sig2noise(ohun_detec, mar = 0.01, pb = FALSE)$SNR
+
+spectral_parameters$class <- ohun_detec$detection.class
+
+
+spectral_parameters$class[spectral_parameters$class != "false.positive"] <- "true.positive"
+
+# make it a factor for ranger to work 
+spectral_parameters$class <- as.factor(spectral_parameters$class)
+  
+
+# run RF model on spectral parameters
+  rfm <-
+    ranger(
+      class ~ .,
+      data = spectral_parameters[, !names(spectral_parameters) %in% c("sound.files", "selec")],
+      num.trees = 10000,
+      importance = "impurity",
+      seed = 10
+    )
+
+  # table(lab_detec$detection.class)
+ohun_detec$pred.class <- rfm$predictions  
+  
+rf_ohun_detec <- ohun_detec[ohun_detec$pred.class == "true.positive", ]
+
+diagnose_detection(reference = reference_all, detection = rf_ohun_detec, pb = FALSE)
+
+```
+
+&nbsp;
+
+<div class="alert alert-info">
+
+- *Random forest filtered ohun detection got ~68% of all signals*
+- *~4% of the detected signals were noise (no bat calls)*
+
+</div>
+
+&nbsp;
+
+---
+
+<font size="4">R session information</font>
+
+```{r session info, echo=F}
+
+sessionInfo()
+
+```

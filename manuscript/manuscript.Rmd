@@ -1,0 +1,183 @@
+---
+title: 'Ohun: an R package for optimizing automatic acoustic signal detection'
+author:
+ - Marcelo Araya-Salas ^1^ * 
+ - Grace Smith-Vidaurre ^2^ 
+ - Gloriana Chaverri ^3^
+ - Fabiola Chirino ^1^
+ - Alejandro Rico-Guevara ^4^ 
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: no
+      smooth_scroll: no
+bibliography: combined_bibs.bib
+citation-style: apa.csl
+link-citations: true
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r, fixing citation .bib files, eval = TRUE, echo = FALSE}
+
+
+# how to cite in Rmarkdown
+# https://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html
+
+
+# Here include the path to the libraries for each author. This code will copy/update the library each time the Rmarkdown file is compiled
+# Alternatively authors ca
+personal_libraries <- c(author_1 = "path/to/lib.file/from/author1/library.bib", author_2 = "path/to/lib.file/from/author2/library.bib")
+
+# update bibtex library
+for (i in 1:length(personal_libraries))
+if (file.exists(personal_libraries[i]))
+ file.copy(from = personal_libraries[i], to = file.path(getwd(), paste0(names(personal_libraries)[i], ".bib")), overwrite = TRUE)
+
+## combine .bib files in compiled.bib ###
+# list bib files
+bibs <- list.files(pattern = ".bib$")
+
+# remove combined from pool
+bibs <- bibs[bibs != "combined_bibs.bib"]
+
+#  read in a list
+if (length(bibs) > 0){
+  combined_bibs_l <- lapply(bibs, readLines)
+  names(combined_bibs_l) <- gsub("\\.bib$", "", bibs)
+
+
+# combine bibs in a single one
+combined_bibs <- unlist(combined_bibs_l)
+
+# save pool libraries as combined_bibs.bib
+writeLines(text = combined_bibs, "combined_bibs.bib")
+
+# check if there are duplicated keys
+keys <- grep("@article{", combined_bibs, fixed = TRUE, value = TRUE)
+keys <- gsub("@article{", "", keys, fixed = TRUE)
+keys <- gsub(",", "", keys, fixed = TRUE)
+
+tab_keys <- table(keys)
+
+if (anyDuplicated(keys)){
+  print(paste0(sum(tab_keys > 1), " duplicate(s) references found in combined_bibs.bib"))
+}
+} else writeLines(text = "empty", "combined_bibs.bib")
+
+
+
+```
+
+
+^1^ Affiliation # 1
+
+^2^ Affiliation # 2
+
+
+\*To whom correspondence should be addressed
+
+### Keywords:
+
+Check [this link](https://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html) for details on how to add citations/bibliography in Rmarkdown
+
+---
+
+## Abstract
+
+## Introduction
+
+- 1st paragraph: 
+
+    - Animal acoustic signals are widely used in scientific research in a highly diverse areas, ranging from neurobiology to community ecology and evolutionary biology. 
+    - The wide usage of animal sounds in research is partly due to the fact that they can be easily registered using non-intrusive methods, in a variety of setting from laboratories to natural areas and equipment for recording these signals has become increasingly inexpensive and accesible. 
+    
+    In addition, the existence of online repositories and growing number of acoustic data set avialable to the comunnity. As a result, a growing variety of a computational tools for the analysis of acoustic features on those signals is increasingly available, which reflects the growing relevance of bioacustics as a relevant tool in the scientific tool kit. (many of those in the form of freely available software written on programming environments familiar to the scientific community (seewave, warbleR, scikit-mad))
+
+
+- 2nd paragraph:
+
+    - Bioacoustic approaches can easily generate large amounts of data, which sometimes may proof challenging to analyze in a timely manner.
+    - Much effort has been put into developing computational tools that can simplify acoustic analyses. For instance,....
+    - However, some key aspects of the analysis remain challenging, despite the great advances witness in the last decade.
+    - The annotations that require a precise definition of signal location in frequency and time, most commonly used in behavioral and phenotypic eovlution research, remain among the most time consuming phases of analysis for this type of data. Fortunately, several tools have been develop to assist researchers in this matter. Indeed, new methods for automatic annotation of acoustic signals are contnuously developed. This growing availability of tools, particularly as free software, is expected to further simplify acoustic data processing, making it accesible to wider range of user and scientific questions.
+    
+- 3rd paragraph:
+        
+    - Here we present the new R package ohun. The package is intended to facilitate the automatic detection of acoustic signals, providing functions to diagnose and optimize detection routines. The package makes use of reference annotations containing the time position of all target signals in a training data set to evaluate the performance of detection routines. This can be done with routine outputs imported from other software as well as detection run with ohun. The package offers an implementation of two automatic detection methods commonly used in bioacustic analysis: energy-based detection and template-based detection. We first explain how acoustic signal detection routines can be evaluate and then showcase the package usage with study cases on zebra-finch songs (*Taenopygia gutata*) and Spix's disc-winged bats (*Thyroptera tricolor*) which represent different recording settings (lab and flight cages) and signal types (sonic mating signals and ultrasonic social calls).          
+
+
+## Diagnosing detection performance
+
+The package makes use of signal detection theory indices to evaluate detection performance. Signal detection theory deals with the process of recovering signals (i.e. target signals) from background noise (not necessarily acoustic noise) and it’s widely used for optimizing this decision making process in the presence of uncertainty. During a detection routine, the detected ‘items’ can be classified into 4 classes: true positives (TPs, target signals correctly identified as signal), false positives (FPs, noise incorrectly identified as ‘signal’), false negatives (FNs, signals incorrectly identified as noise) and true negatives (TNs, background noise correctly identified as noise). However, TNs cannot always be easily defined in the context of acoustic signal detection as noise cannot always be partitioned in discrete units. Hence, the package makes use of TPs, FPs and FNs to calculate three additional indices and can further assist with evaluating the performance of a detection routine.
+
+ - Recall: correct detections relative to total detections (a.k.a. true positive rate or sensitivity; TPs / (TPs + FNs))
+- Precision: correct detections relative to total detections (TPs / (TPs + FPs)).
+- F1 score: combines recall and precision as the harmonic mean of these two, so it provides a single value for evaluating performance (a.k.a. F-measure or Dice similarity coefficient).
+
+A perfect detection will have no false positives or false negatives, which will result in both recall and precision equal to 1. However, perfect detection cannot always be reached and some compromise between detecting all target signals plus some noise (recall = 1 & precision < 1) and detecting only target signals but not all of them (recall < 1 & precision = 1) might be warranted. The right balance between these two extremes will be given by the relative costs of missing signals and mistaking noise for signals. Hence, these indices provide an useful framework for diagnosing and optimizing the performance of a detection routine. 
+
+The package ohun provides a set of tools to evaluate the performance of an acoustic signal detection based on the indices described above. To accomplish this, the result of a detection routine is compared against a reference table containing the time position of all target signals in the sound files.
+
+
+
+## Signal detection
+
+Finding the position of signals in a sound file is a challenging task. ohun offers two methods for automatic signal detection: template-based and energy-based detection. These methods are better suited for highly stereotyped or good signal-to-noise ratio (SNR) signals, respectively. If the target signals don’t fit these requirements, more elaborated methods (i.e. machine learning approaches) are warranted:
+
+
+## Study cases
+
+### Ultrasonic social calls in Spix's disc-winged bats
+
+We recorded 30 individuals of Spix's disc-winged bats at Baru Biological Station, in south-western Costa Rica in January 2018. Bats were captured at their roosting sites (furled leaves of Zingeberaceae plants). Each individual bat was released in a large flight cage (9 x 4 x 3 m) for a 5 min period and their ultrasonic inquiry calls were recorded using a condenser microphone (CM16, Avisoft Bioacoustics, Glienike/
+Nordbahn, Germany) through an Avisoft UltraSoundGate 116Hm connected to a laptop computer running Avisoft-Recorder software (sampling rate of 500 kHz, 16-bit amplitude resolution).
+
+Recordings were manually annotated using Raven Pro 1.6 (XXXX). Annotations were created by visual inspection of spectrograms, in which the start and end of signals were determined by the location of the continuous traces of power spectral entropy of target signals. Annotations were made with a time window of 512 samples with a 70% of overlap. Annotations were then imported into R using the R package Rraven (XXXX).   
+
+Inquiry calls of Spix's disc-winged bats are stereotyped signals. Most variation is found between individuals although the basic structure of a short, downward broadband frequency modulation (FIG XXX) is always shared. Template-based detection is an useful approach when there is little structural differences in the target signals. Therefore we used the function  
+
+
+### Zebra finch songs
+
+We also used recordings from 18 zebra finch males. These recordings were obtained ....
+
+
+## Results
+
+## Discusion
+
+- Despite signal detection indices being commonly reported when presenting new automatic detection methods, to our knowledge widely applicable performance evaluating routines have not been made available.
+- Can be useful for analysis in which relatively small number of recordings are used and also when only a limited amount of training data is available.
+
+## Improving detection speed
+
+Detection routines can take a long time when working with large amounts of acoustic data (e.g. large sound files and/or many sound files). These are some useful points to keep in mine when trying to make a routine more time-efficient:
+
+- Always test procedures on small data subsets
+- `template_detector()` is faster than `energy_detector()`
+- Parallelization (see `parallel` argument in most functions) can significantly speed-up routines, but works better on Unix-based operating systems (linux and mac OS)
+- Sampling rate matters: detecting signals on low sampling rate files goes faster, so we should avoid having nyquist frequencies (sampling rate / 2) way higher than the highest frequency of the target signals (sound files can be downsampled using warbleR's [`fix_sound_files()`](https://marce10.github.io/warbleR/reference/selection_table.html))
+- Large sound files can make the routine crash, use `split_acoustic_data()` to split both reference tables and files into shorter clips.
+- Think about using a computer with lots of RAM memory or a computer cluster for working on large amounts of data
+- `thinning` argument (which reduces the size of the amplitude envelope) can also speed-up `energy_detector()`
+
+
+## Additional tips
+
+- Use your knowledge about the signal structure to determine the initial range for the tuning parameters in a detection optimization routine
+- If people have a hard time figuring out where a target signal occurs in a recording, detection algorithms will also have a hard time
+- Several templates representing the range of variation in signal structure can be used to detect semi-stereotyped signals
+- Make sure reference tables contain all target signals and only the target signals. The performance of the detection cannot be better than the reference itself.
+- Avoid having overlapping signals or several signals as a single one (like a multi-syllable vocalization) in the reference table when running an energy-based detector
+- Low-precision can be improved by training a classification model (e.g. random forest) to tell signals from noise  
+
+
+
+https://cran.r-project.org/web/packages/bioacoustics/vignettes/tutorial.html
+
+## References

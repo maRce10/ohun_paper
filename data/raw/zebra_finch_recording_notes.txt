@@ -1,0 +1,11 @@
+15 Jan 2022
+
+The 25 zebra finch recordings represent a single recording for 25 males recorded at the Rockefeller Field Center in 2018 by Ofer Tchernichovski. These are the same 25 recordings I used for the comparative acoustic analysis to complement Nik's work. These recordings were made publicly available at: ofer.hunter.cuny.edu/songs or http://ofer.sci.ccny.cuny.edu/songs (but cannot access these right now). Each recording contains songs or calls, sometimes both, of a single male recorded alone (e.g. son is undirected).
+
+These are previously published recordings, and the following paper should be cited to document previous publication and methods:
+
+Tchernichovski, O., Eisenberg-Edidin, Sophie, & Jarvis, Erich. (2020). Balanced imitation sustains song culture in zebra finches. Nature Communications, (2021), 1–21. https://doi.org/10.1038/s41467-021-22852-3
+
+The manual selections I'll make in Raven will serve as a reference annotation for comparing ohun detection accuracy. This will be really useful for my postdoc research, because I think ohun + warbleR will be a nice alternative to detection and analysis in SAP (which can only be installed on certain versions of Windows). Marcelo has other datasets that he will include as case studies. I'm aiming for at least 50 elements, which I think should be attainable with 10 recordings or less.
+
+I did selections on the oscillogram with the spectrogram and audio as a guide in Raven Lite 2.0.1 with the default window view.
