@@ -70,9 +70,22 @@ if (anyDuplicated(keys)){
 } else writeLines(text = "empty", "combined_bibs.bib")
 
 
+library(knitr)
 
 ```
 
+
+```{r, echo = FALSE}
+
+
+# knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+
+opts_knit$set(root.dir = "..")
+
+# opts_chunk$set(root.dir = "..")
+
+
+```
 
 ^1^ Affiliation # 1
 
@@ -134,17 +147,29 @@ Finding the position of signals in a sound file is a challenging task. ohun offe
 
 ### Ultrasonic social calls in Spix's disc-winged bats
 
-We recorded 30 individuals of Spix's disc-winged bats at Baru Biological Station, in south-western Costa Rica in January 2018. Bats were captured at their roosting sites (furled leaves of Zingeberaceae plants). Each individual bat was released in a large flight cage (9 x 4 x 3 m) for a 5 min period and their ultrasonic inquiry calls were recorded using a condenser microphone (CM16, Avisoft Bioacoustics, Glienike/
-Nordbahn, Germany) through an Avisoft UltraSoundGate 116Hm connected to a laptop computer running Avisoft-Recorder software (sampling rate of 500 kHz, 16-bit amplitude resolution).
+We recorded 30 individuals of Spix's disc-winged bats at Baru Biological Station, in south-western Costa Rica in January 2018. Bats were captured at their roosting sites (furled leaves of Zingeberaceae plants). Each individual bat was released in a large flight cage (9 x 4 x 3 m) for a 5 min period and their ultrasonic inquiry calls were recorded using a condenser microphone (CM16, Avisoft Bioacoustics, Glienike/Nordbahn, Germany) through an Avisoft UltraSoundGate 116Hm connected to a laptop computer running Avisoft-Recorder software, with a sampling rate of 500 kHz and a 16-bit amplitude resolution.
 
 Recordings were manually annotated using Raven Pro 1.6 (XXXX). Annotations were created by visual inspection of spectrograms, in which the start and end of signals were determined by the location of the continuous traces of power spectral entropy of target signals. Annotations were made with a time window of 512 samples with a 70% of overlap. Annotations were then imported into R using the R package Rraven (XXXX).   
 
-Inquiry calls of Spix's disc-winged bats are stereotyped signals. Most variation is found between individuals although the basic structure of a short, downward broadband frequency modulation (FIG XXX) is always shared. Template-based detection is an useful approach when there is little structural differences in the target signals. Therefore we used the function  
+Inquiry calls of Spix's disc-winged bats are stereotyped signals. Most variation is found between individuals although the basic structure of a short, downward broadband frequency modulation (Fig. bat-spectro) is always shared. Template-based detection is an useful approach when there is little structural differences in the target signals. Therefore we used the function.  
 
+
+```{r catalog, out.width = "100%", echo = FALSE, fig.align= "center"}
+
+# knitr::include_graphics("./data/raw/thyroptera/Catalog_p1.jpeg")
+
+knitr::include_graphics(normalizePath(file.path("./data/raw/thyroptera", "Catalog_p1.jpeg")))
+
+
+list.files("./data/raw/thyroptera")
+print(getwd())
+```
+
+Fig. bat-spectro. 
 
 ### Zebra finch songs
 
-We also used recordings from 18 zebra finch males. These recordings were obtained ....
+We used recordings from 18 zebra finch males. These recordings were obtained ....
 
 
 ## Results
