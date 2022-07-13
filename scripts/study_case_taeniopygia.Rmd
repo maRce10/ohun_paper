@@ -67,123 +67,6 @@ library(warbleR)
 library(viridis)
 ```
 
-```{r manual selection table, eval = FALSE, echo = FALSE}
-
-#Read in manual selections made in Raven
-
-mnl_sel_tbl <- imp_raven(path = raw_data_path, name.from.file = TRUE, ext.case = "lower", all.data = TRUE)
-
-glimpse(mnl_sel_tbl)
-
-mnl_sel_tbl <- mnl_sel_tbl %>% 
-  dplyr::rename(
-    `start` = "Begin Time (s)",
-    `end` = "End Time (s)",
-    `selec` = "Selection",
-    `selection_notes` = "Annotation"
-  ) %>% 
-  dplyr::mutate(
-    bottom.freq = 0.5,
-    top.freq = 10
-  ) %>% 
-  dplyr::select(sound.files, selec, start, end, selec.file, bottom.freq, top.freq, selection_notes)
-
-glimpse(mnl_sel_tbl)
-
-# Calculate signal to noise ratio (SNR)
-mnl_sel_tbl_snr <- sig2noise(mnl_sel_tbl, mar = 0.001, type = 1, in.dB = TRUE, before = FALSE, lim.dB = TRUE, bp = c(unique(mnl_sel_tbl$bottom.freq), unique(mnl_sel_tbl$top.freq)), wl = 10, path = raw_data_path)
-
-glimpse(mnl_sel_tbl_snr)
-
-# Write out the combined manual selections out as a selection table (.csv)
-write.csv(mnl_sel_tbl_snr, file.path(preproc_path, "manual_selections_Taeniopygia.csv"), row.names = FALSE)
-
-```
-
-```{r manual extended selection table, eval = FALSE, echo = FALSE}
-#Write out the combined manual selections out as an extended selection table (RDS).
-
-est <- selection_table(mnl_sel_tbl_snr, whole.recs = FALSE, extended = TRUE, mar = 0.01, parallel = cores, confirm.extended = FALSE, path = raw_data_path)
-
-glimpse(est)
-class(est)
-
-# Update sound file names, which now have "_number" after the ".wav" extension
-wav_nms <- names(attr(est, "wave.objects"))
-wav_nms <- paste(gsub(".wav", "", wav_nms), ".wav", sep = "")
-head(wav_nms) # looks good
-
-est2 <- rename_est_waves(est, wav_nms)
-
-# Looks good
-head(names(attr(est2, "wave.objects")))
-glimpse(est2)
-
-# Remove the "old.sound.file.name" column
-est2 <- est2[, -grep("old.sound.file.name", names(est2))]
-glimpse(est2)
-
-# Add in original sound file name, since each sound.file value is currently a unique name per row of the table
-check_df <- attr(est2, "check.res")
-glimpse(check_df)
-head(check_df$sound.files)
-
-# Are all sampling rates and bit rates the same?
-# Yes: 44.1 kHz sampling rate and bit rate of 16
-check_df %>%
-  distinct(sample.rate, bits)
-
-# Does the order of selections match between the EST and this attribute data frame? If can, can do the column addition below of original sound file name, start and end coordinates, selection duration
-all(est2$sound.files == check_df$sound.files)
-
-est2$duration <- check_df$duration
-est2$original_sound_files <- check_df$orig.sound.files
-est2$original_start <- check_df$orig.start
-est2$original_end <- check_df$orig.end
-
-# Looks good
-glimpse(est2)
-class(est2)
-length(attr(est2, "wave.objects"))
-
-saveRDS(est2, file.path(preproc_path, "manual_selections_Taeniopygia_est.RDS"))
-
-```
-
-```{r automated detection parameters, eval = FALSE, echo = FALSE}
-
-est <- readRDS(file.path(preproc_path, "manual_selections_Taeniopygia_est.RDS"))
-# glimpse(est)
-
-mnl_sel_tbl <- read.csv(file.path(preproc_path, "manual_selections_Taeniopygia.csv"))
-# glimpse(mnl_sel_tbl)
-
-# Use ohun::feature_reference to get parameters that can help automated detection
-# ?ohun::feature_reference
-
-# I get an error when using the EST: "# Error in warbleR::gaps(X = reference, pb = FALSE) : 
-  # extended selection tables must be created 'by.song' to be used in song.param()"
-# feat_ref <- ohun::feature_reference(est, by.sound.file = FALSE,)
-
-feat_ref <- ohun::feature_reference(mnl_sel_tbl, by.sound.file = FALSE)
-
-# Min and max duration of the manual selections
-# Use these for automated detection 
-min_dur <- floor(feat_ref[["sel.duration", "min"]]) 
-max_dur <- ceiling(feat_ref[["sel.duration", "max"]] )
-min_gap <- floor(feat_ref[["gap.duration", "min"]])
-bp <- c(feat_ref[["bottom.freq", "min"]] - 0.5, feat_ref[["top.freq", "max"]] + 0.5)
-
-min_dur
-max_dur
-min_gap
-bp
-
-# A single file for testing
-wav <- "R39Y212_43533.30691176_3_9_8_31_31.wav"
-
-```
-
 &nbsp;
 
 ### Set directory where the sound files and annotations are found
@@ -223,8 +106,11 @@ manual_ref_snr <- signal_2_noise(X = manual_ref, mar = 0.05, path = data_path)
 # select 1 example per sound file
 high_snr <- manual_ref_snr[ave(-manual_ref_snr$SNR, manual_ref_snr$sound.files, FUN = rank) <= 1, ]
 
+high_snr$bottom.freq <- -1
+high_snr$top.freq <- 12
+
 # create catalogs
-catalog(X = high_snr, flim = c(0, 11), nrow = 6, ncol = 3, ovlp = 90, height = 15, width = 20, same.time.scale = FALSE, mar = 0.01, wl = 512, gr = FALSE, spec.mar = 0.4, lab.mar = 0.8, rm.axes = TRUE, by.row = TRUE, box = TRUE, pal = viridis, parallel = 10, collevels = seq(-100, 0, 5), path = data_path)
+catalog(X = high_snr, flim = c(0, 11), nrow = 6, ncol = 3, ovlp = 90, height = 15, width = 20, same.time.scale = TRUE, mar = 0.01, wl = 512, gr = FALSE, spec.mar = 0, lab.mar = 0.001, rm.axes = TRUE, by.row = TRUE, box = TRUE, pal = viridis, parallel = 10, collevels = seq(-140, 0, 5), path = data_path, img.prefix = "same.time", highlight = TRUE, alpha = 0.2)
 
 ```
 
@@ -237,13 +123,22 @@ knitr::include_graphics(normalizePath(file.path(data_path, "Catalog_p1.jpeg")))
 &nbsp;
 
 ### Split reference annotations for training and testing detection
-```{r test and train, eval = TRUE, echo = TRUE}
+```{r trains set, eval = FALSE, echo = FALSE}
 
+# train set must be this one
 train_files <- c(
   "BRN7_43435.27985312_12_1_7_46_25.wav",
   "db1_43427.28100313_11_23_7_48_20.wav",
   "Gry35HP_43455.29800260_12_21_8_16_40.wav"
 )
+
+```
+
+```{r test and train, eval = TRUE, echo = TRUE}
+
+set.seed(450)    
+train_files <- sample(unique(manual_ref$sound.files), 3)    
+
 test_files <- setdiff(manual_ref$sound.files, train_files)
 
 train_ref <- manual_ref[manual_ref$sound.files %in% train_files, ]
@@ -279,6 +174,7 @@ write.csv(opt_det, file.path(preproc_path, "detection_optimization.csv"), row.na
 
 ### Check subset with highest performance (sorted by f1 score)
 ```{r, eval = FALSE}
+
 # subset with highest performance
 sub_opt_det <- opt_det[order(opt_det$f1.score, decreasing = TRUE), ]
 
@@ -319,9 +215,9 @@ best_param
 &nbsp;
 
 ### Run detection on test data
-```{r, detect on all data, eval = TRUE, echo = TRUE}
+```{r, detect on all data, eval = FALSE, echo = TRUE}
 
-opt_det_all <- energy_detector(
+det_test <- energy_detector(
   files = test_files, 
   threshold = best_param$threshold, 
   hop.size = 11.6, 
@@ -334,12 +230,26 @@ opt_det_all <- energy_detector(
 )
 ```
 
+
+```{r , eval = FALSE, echo = FALSE}
+
+write.csv(det_test, file.path(preproc_path, "detection_test_data.csv"), row.names = FALSE)
+
+```
+
 &nbsp;
 
 ### Evaluate detection performance
+
+```{r , eval = TRUE, echo = FALSE}
+
+det_test <- read.csv(file.path(preproc_path, "detection_test_data.csv"))
+
+```
+
 ```{r, diagnose, eval = TRUE, echo = TRUE}
 
-diagnose_detection(reference = test_ref, detection = opt_det_all, by.sound.file = FALSE)
+diagnose_detection(reference = test_ref, detection = det_test, by.sound.file = FALSE)
 
 ```
 

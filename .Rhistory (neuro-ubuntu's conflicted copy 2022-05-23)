@@ -1,0 +1,512 @@
+## add 'developer/' to packages to be installed from github
+x <- c("remotes", "maRce10/warbleR", "bioacoustics", "viridis", "ggplot2", "maRce10/ohun", "DT")
+aa <- lapply(x, function(y) {
+# get pakage name
+pkg <- strsplit(y, "/")[[1]]
+pkg <- pkg[length(pkg)]
+# check if installed, if not then install
+if (!pkg %in% installed.packages()[,"Package"])  {
+if (grepl("/", y))  remotes::install_github(y, force = TRUE) else
+install.packages(y)
+}
+# load package
+try(require(pkg, character.only = T), silent = T)
+})
+# read data
+reference <- read.csv("./data/raw/thyroptera/manual_annotations_thyroptera.csv", stringsAsFactors = FALSE)
+warbleR_options(wav.path = "./data/raw/thyroptera/", wl = 300, parallel = 1, bp = "frange", fast = F, threshold = 15, ovlp = 20)
+# measure spectrographic parameters
+spectral_parameters <- spectro_analysis(reference, bp = c(10, 50), fast = TRUE, ovlp = 70, wl = 200)
+variance.cutoff = 0.7
+spectral_parameters <- spectro_analysis(reference)
+# remove columns with NAs
+spectral_parameters <- spectral_parameters[, !sapply(spectral_parameters, anyNA)]
+# get PCA
+pca <- prcomp(spectral_parameters[, 2:27], scale. = TRUE)
+# get variance by PC
+variance_pca <- summary(pca)$importance
+pcs_keep <- sum(variance_pca[3, ] <= variance.cutoff) + 1
+variance_pca[3, pcs_keep]
+paste0(pcs_keep, "principal components were kept which explained ", variance_pca[3, pcs_keep], " of the variance")
+crayon::silver(paste0(pcs_keep, " principal components were kept which explained ", variance_pca[3, pcs_keep], " of the variance"))
+crayon::silver(paste0(pcs_keep, " principal components were kept which explained ", round(variance_pca[3, pcs_keep], 2), " of the variance"))
+acoustic.space <- pca$x[, 1:pcs_keep]
+acoustic.space
+# keep those as acoustic space
+acoustic.space <- pca$x[, 1:pcs_keep]
+# get centroid
+centroid_coors <- colMeans(acoustic.space)
+centroid_coors
+dists_to_centroid <- unlist(warbleR:::pblapply_wrblr_int(1:nrow(acoustic.space), function(x)
+dist(rbind(acoustic.space[x, ], centroid_coors))))
+dists_to_centroid
+# and istance to centroid
+dists_to_centroid <- unlist(warbleR:::pblapply_wrblr_int(1:nrow(acoustic.space), function(x)
+dist(rbind(acoustic.space[x, ], centroid_coors))))
+# and istance to centroid
+dists_to_centroid <- unlist(warbleR:::pblapply_wrblr_int(pbar = FALSE, 1:nrow(acoustic.space), function(x)
+dist(rbind(acoustic.space[x, ], centroid_coors))))
+stats::quantile(x = dists_to_centroid)
+which.min(dists_to_centroid)
+seq(0, 1, length.out = n.templates + 2)
+n.templates = 1
+seq(0, 1, length.out = n.templates + 2)
+n.templates + 1
+seq(0, 1, length.out = n.templates + 2)[2:(n.templates + 1)]
+stats::quantile(x = dists_to_centroid, seq(0, 1, length.out = n.templates + 2)[2:(n.templates + 1)])
+seq(0, 1, length.out = n.templates + 1)[1:(n.templates)]
+stats::quantile(x = dists_to_centroid, seq(0, 1, length.out = n.templates + 1)[1:(n.templates)])
+which.min(dists_to_centroid - stats::quantile(x = dists_to_centroid, seq(0, 1, length.out = n.templates + 1)[1:(n.templates)]))
+which.min(stats::quantile(x = dists_to_centroid, seq(0, 1, length.out = n.templates + 1)[1:(n.templates)]) - dists_to_centroid)
+stats::quantile(x = dists_to_centroid, seq(0, 1, length.out = n.templates + 1)[1:(n.templates)])
+which.min(dists_to_centroid - stats::quantile(x = dists_to_centroid, seq(0, 1, length.out = n.templates + 1)[1:(n.templates)]))
+n.templates %% 2 == 0
+!n.templates %% 2 == 0
+!3 %% 2 == 0
+!5 %% 2 == 0
+!4 %% 2 == 0
+n.templates <- 3
+template_indx <- which.min(dists_to_centroid - stats::quantile(x = dists_to_centroid, seq(0, 1, length.out = n.templates + 1)[1:(n.templates)]))
+dist_quantiles <- stats::quantile(x = dists_to_centroid, seq(0, 1, length.out = n.templates + 1)[1:(n.templates)])
+sapply(dist_quantiles, function(x)  which.min(dists_to_centroid - x))
+dist_quantiles <- stats::quantile(x = dists_to_centroid, seq(0, 1, length.out = n.templates + 1)[1:(n.templates)])
+dist_quantiles
+sapply(dist_quantiles, function(x)  which.min(dists_to_centroid - x))
+sapply(dist_quantiles, function(x)  which.min(x - dists_to_centroid))
+sapply(dist_quantiles, function(x)  which.min(abs(dists_to_centroid - x)))
+template_indx <-
+sapply(dist_quantiles, function(x)  which.min(abs(dists_to_centroid - x)))
+template_indx
+which(template_indx)
+templates <- reference[template_indx, ]
+templates
+templates <- reference[template_indx, ]
+templates$distance.quantile <- names(template_indx)
+templates
+find_templates(reference)
+get_templates <- function(reference, acoustic.space = NULL, variance.cutoff = 0.7, path = ".", n.templates = 1, ...){
+# if n.templates is not odd
+if (!3 %% 2 == 0)
+warning("even 'n.templates' doesn't include an average template")
+if (!is.null(acoustic.space))
+if (nrow(reference) != nrow(acoustic.space))
+stop("'reference' and 'acoustic.space' must have the same number of columns")
+if (!is.null(acoustic.space)){
+spectral_parameters <- spectro_analysis(reference, path = path, ...)
+# remove columns with NAs
+spectral_parameters <- spectral_parameters[, !sapply(spectral_parameters, anyNA)]
+# get PCA
+pca <- prcomp(spectral_parameters[, 2:27], scale. = TRUE)
+# get variance by PC
+variance_pca <- summary(pca)$importance
+# number of PCs to keep
+pcs_keep <- sum(variance_pca[3, ] <= variance.cutoff) + 1
+# print info
+crayon::silver(paste0(pcs_keep, " principal components were kept which explained ", round(variance_pca[3, pcs_keep], 2), " of the variance"))
+# keep those as acoustic space
+acoustic.space <- pca$x[, 1:pcs_keep]
+}
+# get centroid
+centroid_coors <- colMeans(acoustic.space)
+# and istance to centroid
+dists_to_centroid <- unlist(warbleR:::pblapply_wrblr_int(pbar = FALSE, 1:nrow(acoustic.space), function(x)
+dist(rbind(acoustic.space[x, ], centroid_coors))))
+dist_quantiles <- stats::quantile(x = dists_to_centroid, seq(0, 1, length.out = n.templates + 1)[1:(n.templates)])
+template_indx <-
+sapply(dist_quantiles, function(x)  which.min(abs(dists_to_centroid - x)))
+templates <- reference[template_indx, ]
+templates$distance.quantile <- names(template_indx)
+return(templates)
+}
+get_templates(reference)
+get_templates(reference, path = .Options$warbleR$wav.path)
+path = .Options$warbleR$wav.path
+# if n.templates is not odd
+if (!3 %% 2 == 0)
+warning("even 'n.templates' doesn't include an average template")
+n.templates = 1
+variance.cutoff = 0.7
+acoustic.space = NULL
+if (!is.null(acoustic.space))
+if (nrow(reference) != nrow(acoustic.space))
+stop("'reference' and 'acoustic.space' must have the same number of columns")
+if (!is.null(acoustic.space)){
+spectral_parameters <- spectro_analysis(reference, path = path, ...)
+# remove columns with NAs
+spectral_parameters <- spectral_parameters[, !sapply(spectral_parameters, anyNA)]
+# get PCA
+pca <- prcomp(spectral_parameters[, 2:27], scale. = TRUE)
+# get variance by PC
+variance_pca <- summary(pca)$importance
+# number of PCs to keep
+pcs_keep <- sum(variance_pca[3, ] <= variance.cutoff) + 1
+# print info
+crayon::silver(paste0(pcs_keep, " principal components were kept which explained ", round(variance_pca[3, pcs_keep], 2), " of the variance"))
+# keep those as acoustic space
+acoustic.space <- pca$x[, 1:pcs_keep]
+}
+# get centroid
+centroid_coors <- colMeans(acoustic.space)
+acoustic.space
+pcs_keep
+# keep those as acoustic space
+acoustic.space <- pca$x[, 1:pcs_keep]
+acoustic.space
+get_templates <- function(reference, acoustic.space = NULL, variance.cutoff = 0.7, path = ".", n.templates = 1, ...){
+# if n.templates is not odd
+if (!3 %% 2 == 0)
+warning("even 'n.templates' doesn't include an average template")
+if (!is.null(acoustic.space))
+if (nrow(reference) != nrow(acoustic.space))
+stop("'reference' and 'acoustic.space' must have the same number of columns")
+if (is.null(acoustic.space)){
+spectral_parameters <- spectro_analysis(reference, path = path, ...)
+# remove columns with NAs
+spectral_parameters <- spectral_parameters[, !sapply(spectral_parameters, anyNA)]
+# get PCA
+pca <- prcomp(spectral_parameters[, 2:27], scale. = TRUE)
+# get variance by PC
+variance_pca <- summary(pca)$importance
+# number of PCs to keep
+pcs_keep <- sum(variance_pca[3, ] <= variance.cutoff) + 1
+# print info
+crayon::silver(paste0(pcs_keep, " principal components were kept which explained ", round(variance_pca[3, pcs_keep], 2), " of the variance"))
+# keep those as acoustic space
+acoustic.space <- pca$x[, 1:pcs_keep]
+}
+# get centroid
+centroid_coors <- colMeans(acoustic.space)
+# and istance to centroid
+dists_to_centroid <- unlist(warbleR:::pblapply_wrblr_int(pbar = FALSE, 1:nrow(acoustic.space), function(x)
+dist(rbind(acoustic.space[x, ], centroid_coors))))
+dist_quantiles <- stats::quantile(x = dists_to_centroid, seq(0, 1, length.out = n.templates + 1)[1:(n.templates)])
+template_indx <-
+sapply(dist_quantiles, function(x)  which.min(abs(dists_to_centroid - x)))
+templates <- reference[template_indx, ]
+templates$distance.quantile <- names(template_indx)
+return(templates)
+}
+get_templates(reference, path = .Options$warbleR$wav.path)
+.Options$warbleR$wav.path
+.Options$warbleR$path
+get_templates(reference, path = .Options$warbleR$path)
+n.templates = 1
+!3 %% 2 == 0
+get_templates <- function(reference, acoustic.space = NULL, variance.cutoff = 0.7, path = ".", n.templates = 1, ...){
+# if n.templates is not odd
+if (3 %% 2 == 0)
+warning("even 'n.templates' doesn't include an average template")
+if (!is.null(acoustic.space))
+if (nrow(reference) != nrow(acoustic.space))
+stop("'reference' and 'acoustic.space' must have the same number of columns")
+if (is.null(acoustic.space)){
+spectral_parameters <- spectro_analysis(reference, path = path, ...)
+# remove columns with NAs
+spectral_parameters <- spectral_parameters[, !sapply(spectral_parameters, anyNA)]
+# get PCA
+pca <- prcomp(spectral_parameters[, 2:27], scale. = TRUE)
+# get variance by PC
+variance_pca <- summary(pca)$importance
+# number of PCs to keep
+pcs_keep <- sum(variance_pca[3, ] <= variance.cutoff) + 1
+# print info
+crayon::silver(paste0(pcs_keep, " principal components were kept which explained ", round(variance_pca[3, pcs_keep], 2), " of the variance"))
+# keep those as acoustic space
+acoustic.space <- pca$x[, 1:pcs_keep]
+}
+# get centroid
+centroid_coors <- colMeans(acoustic.space)
+# and istance to centroid
+dists_to_centroid <- unlist(warbleR:::pblapply_wrblr_int(pbar = FALSE, 1:nrow(acoustic.space), function(x)
+dist(rbind(acoustic.space[x, ], centroid_coors))))
+dist_quantiles <- stats::quantile(x = dists_to_centroid, seq(0, 1, length.out = n.templates + 1)[1:(n.templates)])
+template_indx <-
+sapply(dist_quantiles, function(x)  which.min(abs(dists_to_centroid - x)))
+templates <- reference[template_indx, ]
+templates$distance.quantile <- names(template_indx)
+return(templates)
+}
+get_templates(reference, path = .Options$warbleR$path)
+templates <- get_templates(reference, path = .Options$warbleR$path,  bp = c(10, 50), fast = TRUE, ovlp = 70, wl = 200)
+templates
+templates <- get_templates(reference, path = .Options$warbleR$path,  bp = c(10, 50), fast = TRUE, ovlp = 70, wl = 200, n.templates = 3)
+str(templates)
+dist_quantiles
+dist_quantiles <- stats::quantile(x = dists_to_centroid, probs = seq(0, 1, length.out = n.templates + 1)[1:(n.templates)], digits = 1)
+dist_quantiles
+get_templates <- function(reference, acoustic.space = NULL, variance.cutoff = 0.7, path = ".", n.templates = 1, ...){
+# if n.templates is not odd
+if (3 %% 2 == 0)
+warning("even 'n.templates' doesn't include an average template")
+if (!is.null(acoustic.space))
+if (nrow(reference) != nrow(acoustic.space))
+stop("'reference' and 'acoustic.space' must have the same number of columns")
+if (is.null(acoustic.space)){
+spectral_parameters <- spectro_analysis(reference, path = path, ...)
+# remove columns with NAs
+spectral_parameters <- spectral_parameters[, !sapply(spectral_parameters, anyNA)]
+# get PCA
+pca <- prcomp(spectral_parameters[, 2:27], scale. = TRUE)
+# get variance by PC
+variance_pca <- summary(pca)$importance
+# number of PCs to keep
+pcs_keep <- sum(variance_pca[3, ] <= variance.cutoff) + 1
+# print info
+crayon::silver(paste0(pcs_keep, " principal components were kept which explained ", round(variance_pca[3, pcs_keep], 2), " of the variance"))
+# keep those as acoustic space
+acoustic.space <- pca$x[, 1:pcs_keep]
+}
+# get centroid
+centroid_coors <- colMeans(acoustic.space)
+# and istance to centroid
+dists_to_centroid <- unlist(warbleR:::pblapply_wrblr_int(pbar = FALSE, 1:nrow(acoustic.space), function(x)
+dist(rbind(acoustic.space[x, ], centroid_coors))))
+dist_quantiles <- stats::quantile(x = dists_to_centroid, probs = seq(0, 1, length.out = n.templates + 1)[1:(n.templates)], digits = 1)
+template_indx <-
+sapply(dist_quantiles, function(x)  which.min(abs(dists_to_centroid - x)))
+templates <- reference[template_indx, ]
+templates$distance.quantile <- names(template_indx)
+return(templates)
+}
+templates <- get_templates(reference, path = .Options$warbleR$path,  bp = c(10, 50), fast = TRUE, ovlp = 70, wl = 200, n.templates = 3)
+templates
+templates_est <- selection_table(templates, extended = TRUE, confirm.extended = FALSE)
+templates_est <- rename_est_waves(templates_est, new.sound.files = templates$distance.quantile)
+saveRDS(templates_est, "./data/processed/templates_thyroptera_est.RDS")
+paral <- 1
+# use mean peak freq sels as template, fourier spectrograms
+corr_templ <- template_correlator(templates = templates_est,
+path = .Options$warbleR$path, parallel = paral, hop.size = 10, ovlp = 70)
+saveRDS(corr_templ, "./data/processed/template_correlations_3_templates_thyroptera.RDS")
+optimize_fourier_detec <- optimize_template_detector(reference = reference, template.correlations = corr_templ,
+threshold = seq(0.05, 0.5, 0.01), parallel = 1, by.sound.file = TRUE, pb = TRUE)
+saveRDS(optimize_fourier_detec, "./data/processed/optimization_results_3_templates_thyroptera.RDS")
+get_templates <- function(reference, acoustic.space = NULL, variance.cutoff = 0.7, path = ".", n.templates = 1, ...){
+if (!is.null(acoustic.space))
+if (nrow(reference) != nrow(acoustic.space))
+stop("'reference' and 'acoustic.space' must have the same number of columns")
+if (is.null(acoustic.space)){
+spectral_parameters <- spectro_analysis(reference, path = path, ...)
+# remove columns with NAs
+spectral_parameters <- spectral_parameters[, !sapply(spectral_parameters, anyNA)]
+# get PCA
+pca <- prcomp(spectral_parameters[, 2:27], scale. = TRUE)
+# get variance by PC
+variance_pca <- summary(pca)$importance
+# number of PCs to keep
+pcs_keep <- sum(variance_pca[3, ] <= variance.cutoff) + 1
+# print info
+crayon::silver(paste0(pcs_keep, " principal components were kept which explained ", round(variance_pca[3, pcs_keep], 2), " of the variance"))
+# keep those as acoustic space
+acoustic.space <- pca$x[, 1:pcs_keep]
+}
+# get centroid
+centroid_coors <- colMeans(acoustic.space)
+# and istance to centroid
+dists_to_centroid <- unlist(warbleR:::pblapply_wrblr_int(pbar = FALSE, 1:nrow(acoustic.space), function(x)
+dist(rbind(acoustic.space[x, ], centroid_coors))))
+dist_quantiles <- stats::quantile(x = dists_to_centroid, probs = seq(0, 1, length.out = n.templates + 1)[1:(n.templates)], digits = 1)
+template_indx <-
+sapply(dist_quantiles, function(x)  which.min(abs(dists_to_centroid - x)))
+templates <- reference[template_indx, ]
+templates$distance.quantile <- names(template_indx)
+return(templates)
+}
+# find templates
+templates <- get_templates(reference, path = .Options$warbleR$path,  bp = c(10, 50), fast = TRUE, ovlp = 70, wl = 200, n.templates = 2)
+templates
+templates <- get_templates(reference, path = .Options$warbleR$path,  bp = c(10, 50), fast = TRUE, ovlp = 70, wl = 200, n.templates = 4)
+# label templates
+# templates$template.type <- c("sd_below_pc1_indx", "pc1_mean", "sd_above_pc1_indx")
+# create ext. selection table
+templates_est <- selection_table(templates, extended = TRUE, confirm.extended = FALSE)
+templates_est <- rename_est_waves(templates_est, new.sound.files = templates$distance.quantile)
+saveRDS(templates_est, "./data/processed/templates_thyroptera_est.RDS")
+```
+```{r, eval = FALSE, echo = TRUE}
+templates_est <- readRDS("./data/processed/templates_thyroptera_est.RDS")
+paral <- 1
+# use mean peak freq sels as template, fourier spectrograms
+corr_templ <- template_correlator(templates = templates_est,
+path = .Options$warbleR$path, parallel = paral, hop.size = 10, ovlp = 70)
+saveRDS(corr_templ, "./data/processed/template_correlations_3_templates_thyroptera.RDS")
+optimize_fourier_detec <- optimize_template_detector(reference = reference, template.correlations = corr_templ,
+threshold = seq(0.05, 0.5, 0.01), parallel = 1, by.sound.file = TRUE, pb = TRUE)
+saveRDS(optimize_fourier_detec, "./data/processed/optimization_results_3_templates_thyroptera.RDS")
+templates <- get_templates(reference, path = .Options$warbleR$path,  bp = c(10, 50), fast = TRUE, ovlp = 70, wl = 200, n.templates = 4, variance.cutoff = 0.3)
+# label templates
+# templates$template.type <- c("sd_below_pc1_indx", "pc1_mean", "sd_above_pc1_indx")
+# create ext. selection table
+templates_est <- selection_table(templates, extended = TRUE, confirm.extended = FALSE)
+templates_est <- rename_est_waves(templates_est, new.sound.files = templates$distance.quantile)
+saveRDS(templates_est, "./data/processed/templates_thyroptera_est.RDS")
+templates_est <- readRDS("./data/processed/templates_thyroptera_est.RDS")
+paral <- 1
+# use mean peak freq sels as template, fourier spectrograms
+corr_templ <- template_correlator(templates = templates_est,
+path = .Options$warbleR$path, parallel = paral, hop.size = 10, ovlp = 70)
+saveRDS(corr_templ, "./data/processed/template_correlations_3_templates_thyroptera.RDS")
+corr_templ <- readRDS("./data/processed/template_correlations_3_templates_thyroptera.RDS")
+optimize_fourier_detec <- optimize_template_detector(reference = reference, template.correlations = corr_templ,
+threshold = seq(0.05, 0.5, 0.01), parallel = 1, by.sound.file = TRUE, pb = TRUE)
+saveRDS(optimize_fourier_detec, "./data/processed/optimization_results_3_templates_thyroptera.RDS")
+# find templates
+templates <- get_templates(reference, path = .Options$warbleR$path,  bp = c(10, 50), fast = TRUE, ovlp = 70, wl = 200, n.templates = 3)
+# label templates
+# templates$template.type <- c("sd_below_pc1_indx", "pc1_mean", "sd_above_pc1_indx")
+# create ext. selection table
+templates_est <- selection_table(templates, extended = TRUE, confirm.extended = FALSE)
+templates_est <- rename_est_waves(templates_est, new.sound.files = templates$distance.quantile)
+saveRDS(templates_est, "./data/processed/templates_thyroptera_est.RDS")
+templates_est <- readRDS("./data/processed/templates_thyroptera_est.RDS")
+paral <- 1
+# use mean peak freq sels as template, fourier spectrograms
+corr_templ <- template_correlator(templates = templates_est,
+path = .Options$warbleR$path, parallel = paral, hop.size = 10, ovlp = 70)
+saveRDS(corr_templ, "./data/processed/template_correlations_3_templates_thyroptera.RDS")
+templates_est <- readRDS("./data/processed/templates_thyroptera_est.RDS")
+paral <- 1
+# use mean peak freq sels as template, fourier spectrograms
+corr_templ <- template_correlator(templates = templates_est,
+path = .Options$warbleR$path, parallel = paral, hop.size = 10, ovlp = 70)
+saveRDS(corr_templ, "./data/processed/template_correlations_3_templates_thyroptera.RDS")
+corr_templ <- readRDS("./data/processed/template_correlations_3_templates_thyroptera.RDS")
+optimize_fourier_detec <- optimize_template_detector(reference = reference, template.correlations = corr_templ,
+threshold = seq(0.05, 0.5, 0.01), parallel = 1, by.sound.file = TRUE, pb = TRUE)
+saveRDS(optimize_fourier_detec, "./data/processed/optimization_results_3_templates_thyroptera.RDS")
+x <- c("tidyverse", "ohun", "Rraven", "warbleR", "pbapply", "remotes")
+out <- lapply(x, function(y) {
+# check if installed, if not then install
+if (!y %in% installed.packages()[,"Package"])
+install.packages(y)
+# load package
+try(require(y, character.only = T), silent = T)
+})
+# remotes::install_github("marce10/ohun")
+raw_data_path <- "data/raw/taeniopygia"
+preproc_path <- "data/processed/taeniopygia"
+figure_path <- "data/processed/taeniopygia/figures"
+cores <- parallel::detectCores() - 2
+seed <- 489
+est <- readRDS(file.path(preproc_path, "manual_selections_Taeniopygia_est.RDS"))
+glimpse(est)
+mnl_sel_tbl <- read.csv(file.path(preproc_path, "manual_selections_Taeniopygia.csv"))
+glimpse(mnl_sel_tbl)
+# I get an error when using the EST: "# Error in warbleR::gaps(X = reference, pb = FALSE) :
+# extended selection tables must be created 'by.song' to be used in song.param()"
+feat_ref <- ohun::feature_reference(est, by.sound.file = FALSE)
+feat_ref <- ohun::feature_reference(mnl_sel_tbl, by.sound.file = FALSE)
+is(mnl_sel_tbl, "extended_selection_table")
+mnl_sel_tbl
+is(mnl_sel_tbl, extended_selection_table)
+is(est, "extended_selection_table")
+feat_ref <- ohun::feature_reference(mnl_sel_tbl, by.sound.file = FALSE)
+# Min and max duration of the manual selections
+# Use these for automated detection but convert to milliseconds
+min_dur <- floor(feat_ref[["sel.duration", "min"]] * 1000)
+max_dur <- ceiling(feat_ref[["sel.duration", "max"]] * 1000)
+min_gap <- floor(feat_ref[["gap.duration", "min"]] * 1000)
+bp <- c(feat_ref[["bottom.freq", "min"]], feat_ref[["top.freq", "max"]])
+min_dur
+max_dur
+min_gap
+bp
+wav
+ref_tbl <- mnl_sel_tbl %>%
+dplyr::filter(sound.files %in% wavs)
+library(warbleR)
+packrat::off()
+library(warbleR)
+library(warbleR)
+library(warbleR)
+library(warbleR)
+library(warbleR)
+library(warbleR)
+library(warbleR)
+library(warbleR)
+library(warbleR)
+remove.packages("knitr")
+install.packages(knitr)
+install.packages("knitr")
+packrat::off()
+install.packages("knitr")
+install.packages("knitr")
+library(warbleR)
+library(tuneR)
+hz2mel(440, htk = TRUE)
+hz2mel(4400, htk = TRUE)
+library(ohun)
+## add 'developer/' to packages to be installed from github
+x <- c("remotes", "maRce10/warbleR", "bioacoustics", "viridis", "ggplot2", "maRce10/ohun", "DT")
+aa <- lapply(x, function(y) {
+# get pakage name
+pkg <- strsplit(y, "/")[[1]]
+pkg <- pkg[length(pkg)]
+# check if installed, if not then install
+if (!pkg %in% installed.packages()[,"Package"])  {
+if (grepl("/", y))  remotes::install_github(y, force = TRUE) else
+install.packages(y)
+}
+# load package
+try(require(pkg, character.only = T), silent = T)
+})
+library(ohun)
+# create new table
+lbh1_detection <- lbh1_reference
+# add 'noise' to start
+set.seed(18)
+lbh1_detection$start <- lbh1_detection$start + rnorm(nrow(lbh1_detection), mean = 0,
+sd = 0.1)
+## print spectrogram
+label_spectro(wave = lbh1, reference = lbh1_reference, detection = lbh1_detection,
+hop.size = 10, ovlp = 50, flim = c(1, 10))
+data("lbh1", "lbh2", "lbh_reference")
+# create new table
+lbh1_detection <- lbh1_reference
+# add 'noise' to start
+set.seed(18)
+lbh1_detection$start <- lbh1_detection$start + rnorm(nrow(lbh1_detection), mean = 0,
+sd = 0.1)
+## print spectrogram
+label_spectro(wave = lbh1, reference = lbh1_reference, detection = lbh1_detection,
+hop.size = 10, ovlp = 50, flim = c(1, 10))
+# save sound file
+writeWave(lbh1, file.path(tempdir(), "lbh1.wav"))
+# save sound file
+writeWave(lbh2, file.path(tempdir(), "lbh2.wav"))
+# print spectrogram
+label_spectro(wave = lbh1, reference = lbh_reference[lbh_reference$sound.files ==
+"lbh1.wav", ], hop.size = 10, ovlp = 50, flim = c(1, 10))
+diagnose_detection(reference = lbh1_detection, detection = lbh1_reference)[, c(1:3,
+7:9)]
+lbh1_reference <- lbh_reference[lbh_reference$sound.files == "lbh1.wav", ]
+# diagnose
+diagnose_detection(reference = lbh1_reference, detection = lbh1_reference)[, c(1:3,
+7:9)]
+lbh1_detection <- lbh1_reference[3:9, ]
+# create new table
+lbh1_detection <- lbh1_reference[3:9, ]
+# print spectrogram
+label_spectro(wave = lbh1, reference = lbh1_reference, detection = lbh1_detection,
+hop.size = 10, ovlp = 50, flim = c(1, 10))
+# diagnose
+diagnose_detection(reference = lbh1_reference, detection = lbh1_detection)[, c(1:3,
+7:9)]
+# diagnose
+diagnose_detection(reference = lbh1_reference, detection = lbh1_detection)
+a <- readRDS("/media/neuro/MARCE10/alivio3/detection_55kHz_with_bedding_alivio_round3.RDS")
+a <- readRDS("/media/neuro/MARCE10/alivio3/detection_55kHz_with_bedding_alivio_round3.RDS")
+str(a)
+table(a$sound.files)
+b <- read.csv("/media/neuro/MARCE10/alivio3/filtered_detection_55kHz_with_bedding_alivio_round3.csv")
+table(b$sound.files)
+timeout(seconds)
+_R_INSTALL_PACKAGES_ELAPSED_TIMEOUT_
+`_R_INSTALL_PACKAGES_ELAPSED_TIMEOUT_`
+Sys.getenv(`_R_INSTALL_PACKAGES_ELAPSED_TIMEOUT_`)
+Sys.getenv(_R_INSTALL_PACKAGES_ELAPSED_TIMEOUT_)
+Sys.getenv("_R_INSTALL_PACKAGES_ELAPSED_TIMEOUT_")
+library(warbleR)
+install.packages("warbleR")
+packrat::off()
+library(warbleR)

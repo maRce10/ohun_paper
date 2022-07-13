@@ -61,6 +61,8 @@ opts_knit$set(root.dir = "..")
 opts_chunk$set( fig.width = 8, fig.height = 3.5)
 
 data_path <- "./data/raw/thyroptera/"
+
+source("~/Dropbox/R_package_testing/ohun/R/get_templates.R")
 ```
 
 ```{r, message=FALSE, warning=FALSE}
@@ -80,6 +82,7 @@ warbleR_options(wav.path = "./data/raw/thyroptera/", wl = 300, parallel = 1, bp 
 ```
 
 ```{r get sample of recordings from flight coordination paper, eval = FALSE, echo = FALSE}
+
 fixed_calls <- read.csv( "./data/processed/manually_fixed_call_detections.csv")
 table(fixed_calls)
 table(fixed_calls$detection)
@@ -128,7 +131,8 @@ manual_ref <- read.csv("./data/raw/thyroptera/manual_annotations_thyroptera.csv"
 
 ```{r read data 2, eval = FALSE, echo = TRUE}
 
-manual_ref <- read.csv(file.path(data_path, "manual_annotations_thyroptera.csv"), stringsAsFactors = FALSE)
+manual_ref <- read.csv(file.path(data_path, "manual_annotations_thyroptera.csv"))
+
 ```
 
 &nbsp;
@@ -144,10 +148,18 @@ manual_ref_snr <- signal_2_noise(X = manual_ref, mar = 0.05)
 # select 1 example per sound file
 high_snr <- manual_ref_snr[ave(-manual_ref_snr$SNR, manual_ref_snr$sound.files, FUN = rank) <= 1, ]
 
+
 # create catalogs
-catalog(X = high_snr, flim = c(10, 45), nrow = 6, ncol = 5, ovlp = 90, height = 15, width = 20, same.time.scale = TRUE, mar = 0.005, wl = 512, gr = FALSE, spec.mar = 0.4, lab.mar = 0.8, rm.axes = TRUE, by.row = TRUE, box = TRUE, pal = viridis, parallel = 10, collevels = seq(-100, 0, 5))
+catalog(X = high_snr, flim = c(10, 45), nrow = 6, ncol = 5, ovlp = 90, height = 10, width = 20, same.time.scale = TRUE, mar = 0.005, wl = 512, gr = FALSE, spec.mar = 0, lab.mar = 0.001, rm.axes = TRUE, by.row = TRUE, box = FALSE, pal = viridis, collevels = seq(-100, 0, 5), labels = NULL)
 
 ```
+
+```{r fig for paper, eval = FALSE, echo = FALSE}
+
+catalog(X = high_snr[1:15, ], flim = c(10, 45), nrow = 3, ncol = 5, ovlp = 90, height = 7.5, width = 20, same.time.scale = TRUE, mar = 0.005, wl = 512, gr = FALSE, spec.mar = 0.4, lab.mar = 0.2, rm.axes = TRUE, by.row = TRUE, box = TRUE, pal = viridis, parallel = 1, collevels = seq(-100, 0, 5), img.prefix = "thyroptera_15_calls", labels = NULL)
+
+```
+
 
 ```{r catalog, out.width = "100%", echo = FALSE, fig.align= "center"}
 
@@ -160,14 +172,10 @@ knitr::include_graphics(normalizePath(file.path(data_path, "Catalog_p1.jpeg")))
 ### Split reference annotations for training and testing detection
 ```{r test and train, eval = TRUE, echo = TRUE}
 
-train_files <- c(
- "ch1MPI2020-01-17_08-44-19_0000028.wav",
- "ch1MPI2020-01-23_10-30-35_0000106.wav",
- "ch1MPI_2020-01-30_15-06-38_0000193.wav",
- "ch1MPI2020-01-16_11-46-10_0000018.wav",
- "ch1MPI2020-01-16_13-40-58_0000019.wav",
- "ch1MPI2020-01-24_11-28-15_0000124.wav"
-)
+set.seed(1)
+
+train_files <- sample(unique(manual_ref$sound.files), size = 5)
+
 test_files <- setdiff(manual_ref$sound.files, train_files)
 
 train_ref <- manual_ref[manual_ref$sound.files %in% train_files, ]
@@ -177,15 +185,17 @@ test_ref <- manual_ref[manual_ref$sound.files %in% test_files, ]
 &nbsp;
 
 ### Get diverse set of templates
-```{r cross-correlation detection, eval = FALSE, echo = TRUE}
-
+```{r get templates, eval = TRUE, echo = TRUE, fig.height=7}
 # find templates
-templates <- get_templates(train_ref, path = data_path,  bp = c(10, 50), fast = TRUE, ovlp = , wl = 200, n.templates = 4)
+templates <- get_templates(train_ref, path = data_path,  bp = c(10, 50), fast = TRUE, ovlp = , wl = 200, n.sub.spaces = 3)
+```
 
+
+```{r get templates 2, eval = FALSE, echo = TRUE}
 # create ext. selection table
 templates_est <- selection_table(templates, extended = TRUE, confirm.extended = FALSE, path = data_path)
 
-templates_est <- rename_est_waves(templates_est, new.sound.files = templates$distance.quantile)
+templates_est <- rename_est_waves(templates_est, new.sound.files = templates$template)
 
 ```
 &nbsp;
@@ -217,9 +227,6 @@ saveRDS(templates_est, "./data/processed/templates_thyroptera_est.RDS")
 
 ```{r,  eval = FALSE, echo = TRUE}
 
-corr_templ <- template_correlator(templates = templates_est,
-    path = data_path, files = unique(train_ref$sound.files), parallel = paral, hop.size = 10, ovlp = 70)
-
 corr_templ_train <- template_correlator(
   templates = templates_est,
     path = data_path, 
@@ -231,12 +238,13 @@ corr_templ_train <- template_correlator(
 opt_detec_train <- optimize_template_detector(
   reference = train_ref, 
   template.correlations = corr_templ_train,
-  threshold = seq(0.05, 0.5, 0.01)
+  threshold = seq(0.1, 0.9, 0.05)
   )
 
 ```
 
 ```{r, eval = FALSE, echo = FALSE}
+
 templates_est <- readRDS("./data/processed/templates_thyroptera_est.RDS")
 
 paral <- 10
@@ -250,15 +258,14 @@ corr_templ_train <- template_correlator(
   ovlp = 70
   )
 
-
 opt_detec_train <- optimize_template_detector(
   reference = train_ref, 
   template.correlations = corr_templ_train,
-  threshold = seq(0.05, 0.5, 0.01), 
+  threshold = seq(0.1, 0.9, 0.05), 
   parallel = paral
   )
 
-opt_detec_train$templates <- gsub("-1", "", opt_detec_train$templates)
+opt_detec_train$templates <- gsub("-1$", "", opt_detec_train$templates)
 
 saveRDS(opt_detec_train, "./data/processed/optimization_results_3_templates_thyroptera.RDS")
 
@@ -266,32 +273,17 @@ saveRDS(opt_detec_train, "./data/processed/optimization_results_3_templates_thyr
 
 &nbsp;
 
-### Create recall-precision plot
-```{r, eval = FALSE}
-
-# summarize across sound files
-diag_train <- summarize_diagnostic(opt_detec_train, time.diagnostics = FALSE)
-agg_sd <- aggregate(cbind(recall, precision) ~ threshold + templates, data = opt_detec_train,
-    mean)
-
-# plot
-ggplot(agg_sd, aes(x = recall, y = precision, group = templates, color = templates)) +
-    geom_line() + geom_point() + scale_color_viridis_d(end = 1) + theme_classic()
-```
-
+### Create plot with threshold vs f1 score
 ```{r, eval = TRUE, echo = FALSE}
 
 opt_detec_train <- readRDS("./data/processed/optimization_results_3_templates_thyroptera.RDS")
 
-diag_train <- summarize_diagnostic(opt_detec_train, time.diagnostics = FALSE)
 
-# names(diag_train)
+agg_f1 <- aggregate(f1.score ~ threshold + templates, data = opt_detec_train,
+mean)
 
-agg_sd <- aggregate(cbind(recall, precision) ~ threshold + templates, data = diag_train,
-    mean)
-
-ggplot(agg_sd, aes(x = recall, y = precision, group = templates, color = templates)) +
-    geom_line() + geom_point() + scale_color_viridis_d(end = 1) + theme_classic()
+ggplot(agg_f1, aes(x = threshold, y = f1.score, group = templates, color = templates)) +
+geom_line() + geom_point() + scale_color_viridis_d(end = 1) + theme_classic()
 
 ```
 
@@ -301,71 +293,77 @@ ggplot(agg_sd, aes(x = recall, y = precision, group = templates, color = templat
 
 ```{r, eval = FALSE}
 
-sub_diag_train <-diag_train[order(diag_train$f1.score, decreasing = TRUE), ]
+opt_detec_train <- opt_detec_train[order(opt_detec_train$f1.score, decreasing = TRUE), ]
 
-sub_diag_train <- sub_diag_train[1:10, c("templates","threshold", "true.positives", "false.positives",  "false.negatives", "recall", "precision", "f1.score")]
+sub_opt_detec_train <- opt_detec_train[1:10, c("templates","threshold", "true.positives", "false.positives",  "false.negatives", "recall", "precision", "f1.score")]
 
-sub_diag_train
+sub_opt_detec_train
 ```
 
 ```{r, eval = TRUE, echo = FALSE}
 
 # subset with highest performance
-sub_diag_train <-diag_train[order(diag_train$f1.score, decreasing = TRUE), ]
+opt_detec_train <- opt_detec_train[order(opt_detec_train$f1.score, decreasing = TRUE), ]
 
-sub_diag_train <- sub_diag_train[1:10, c("templates","threshold", "true.positives", "false.positives",  "false.negatives", "recall", "precision", "f1.score")]
+sub_opt_detec_train <- opt_detec_train[1:10, c("templates","threshold", "true.positives", "false.positives",  "false.negatives", "recall", "precision", "f1.score")]
 
 # print dynamic table
-oa_DT <- datatable(sub_diag_train, editable = list(target = "row"), rownames = FALSE, style = "bootstrap",
+oa_DT <- datatable(sub_opt_detec_train, editable = list(target = "row"), rownames = FALSE, style = "bootstrap",
     filter = "top", options = list(pageLength = 100, autoWidth = TRUE, dom = "ft"),
     autoHideNavigation = TRUE, escape = FALSE)
 
-formatRound(table = oa_DT, columns = sapply(sub_diag_train, is.numeric), 3)
+formatRound(table = oa_DT, columns = sapply(sub_opt_detec_train, is.numeric), 3)
+
 ```
 
 &nbsp;
 
 ### Run detection on test files
-```{r, detect on all data, eval = FALSE, echo = TRUE}
+
+We used a threshold of 0.45 as te centroid template seems to behave well across thresholds.
+```{r, detect on all data 67, eval = FALSE, echo = TRUE}
 
 # get correlation vectors for test files
 corr_templ_test <- template_correlator(
-  templates = templates_est[templates_est$sound.file == "50%", ],
+  templates = templates_est[templates_est$sound.file == "centroid", ],
     path = data_path, files = unique(test_ref$sound.files), 
-  parallel = paral, 
   hop.size = 10, 
   ovlp = 70
   )
 
-# extract best template-threshold combination
-opt_50 <- optimize_fourier_detec[optimize_fourier_detec$templates == "50%", ]
-opt_thresh <- opt_50$threshold[which.max(opt_50$f1.score)]
-
 # detect on test files
 detec_test <- template_detector(
   template.correlations = corr_templ_test,
-    threshold = opt_thresh
+    threshold = 0.45
   )
+
 ```
 
 &nbsp;
 
 ### Evaluate detection performance on test files
-```{r, diagnose detect on all data, eval = FALSE, echo = TRUE}
+```{r, diagnose detect on all data 67, eval = FALSE, echo = TRUE}
 
 diagnose_detection(reference = test_ref, detection = detec_test)
 
 ```
 
 ```{r, eval = FALSE, echo = FALSE}
-saveRDS(detec_test, "./data/processed/detection_thyroptera_all.RDS")
+
+saveRDS(detec_test, "./data/processed/detection_thyroptera_all_67%_template.RDS")
+
 ```
 
 ```{r, eval = TRUE, echo = FALSE}
 
-detec_test <- readRDS("./data/processed/detection_thyroptera_all.RDS")
+detec_test <- readRDS("./data/processed/detection_thyroptera_all_67%_template.RDS")
 
-diagnose_detection(reference = test_ref, detection = detec_test)
+dd <-diagnose_detection(reference = test_ref, detection = detec_test)
+
+dd
+
+dd$f1.score
+
 ```
 
 &nbsp;
@@ -374,14 +372,15 @@ diagnose_detection(reference = test_ref, detection = detec_test)
 
 ### Takeaways
 
-- Good performance on detecting Spix's disc-winged social calls: F1 score was 0.99 for the training data set and 0.94 for the testing data 
+- Good performance on detecting Spix's disc-winged social calls: F1 score was `r round(dd$f1.score, 3)` for the training data set and `r round(max(opt_detec_train$f1.score), 3)` for the testing data 
+
+- Some merged positives were found but notice that there are some overlapping signals in the reference annotation as well (can be checked with `warbleR::overlapping_sels(manual_ref)`)
 
 </div>
 
 &nbsp;
 
 ---
-
 
 <font size="4">Session information</font>
 
