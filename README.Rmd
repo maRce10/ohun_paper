@@ -1,8 +1,7 @@
 ---
 title: ohun_paper_analyses
-author: Marcelo Araya Salas
+author: "Marcelo Araya Salas"
 output: github_document
-date: `r format(Sys.Date(), "%d-%m-%Y")`
 editor_options:
   chunk_output_type: console
 ---
