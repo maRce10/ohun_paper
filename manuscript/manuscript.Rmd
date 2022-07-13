@@ -2,15 +2,15 @@
 title: 'ohun: an R package for optimizing automatic acoustic signal detection'
 author:
 output:
+  word_document:
+    toc: yes
+    toc_depth: '3'
   html_document:
     toc: yes
     toc_depth: 3
     toc_float:
       collapsed: no
       smooth_scroll: no
-  word_document:
-    toc: yes
-    toc_depth: '3'
   pdf_document:
     toc: yes
     toc_depth: '3'
@@ -196,7 +196,7 @@ Animal acoustic signals are widely used in a diversity of research areas. This i
 
 ## Introduction
 
-Animal acoustic signals are widely used to investigate a variety of questions in highly diverse areas, ranging from neurobiology to community ecology and evolutionary biology. The wide usage of animal sounds in research is partly due to the fact that they can be easily registered using non-intrusive methods, can be obtained in a variety of settings from laboratories to natural areas, and the equipment required for registering an analyzing these signals has become increasingly inexpensive. In addition, the existence of online repositories and growing number has facilitated the study of these traits at larger taxonomic and geographic scales. However, the adoption of bioacustic approaches in research can also imply large amounts of data (i.e. lots of recordings), which can be challenge to analyzed manually by human observers. As a result, a growing number of computational tools for the analysis of acoustic features on those signals is increasingly available (reviewd by @Stowell2022), reflecting the need of automated approaches for efficiently conducting these analyses. 
+Animal acoustic signals are widely used to investigate a variety of questions in highly diverse areas, ranging from neurobiology to community ecology and evolutionary biology. The wide usage of animal sounds in research is partly due to the fact that they can be easily registered using non-intrusive methods, can be obtained in a variety of settings from laboratories to natural areas, and the equipment required for registering an analyzing these signals has become increasingly inexpensive. In addition, the existence of online repositories and growing number has facilitated the study of these traits at larger taxonomic and geographic scales. However, the adoption of bioacustic approaches in research can also imply large amounts of data (i.e. lots of recordings), which can be challenge to analyzed manually by human observers. As a result, a growing number of computational tools for the analysis of acoustic features on those signals is increasingly available (reviewed by @Stowell2022), reflecting the need of automated approaches for efficiently conducting these analyses. 
 
 <!-- Many of these tools are supplied in the form of freely available software written on programming environments familiar to the scientific community (seewave, warbleR, scikit-mad), further simplifying their implementation for research. -->
 <!-- Bioacoustic research can easily generate large amounts of data, which sometimes may proof challenging to analyze in a timely manner. Annotations that require precise location of signals in frequency and time, most commonly used in behavioral and phenotypic evolution research, remain among the most time consuming phases of analysis for this type of data. Fortunately, several tools have been develop to assist researchers in this matter. Indeed, new methods for automatic annotation of acoustic signals are continuously developed . -->
