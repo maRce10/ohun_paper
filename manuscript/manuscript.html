@@ -1787,7 +1787,7 @@ Seattle, USA</p>
 <h3>Keywords:</h3>
 <hr />
 <p> </p>
-<p>Word count: 3814 (including code chunks: 5445)</p>
+<p>Word count: 3814 (including code chunks: 5442)</p>
 <p>Check <a href="https://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html">this
 link</a> for details on how to add citations/bibliography in
 Rmarkdown</p>
@@ -1838,7 +1838,7 @@ approaches in research can also imply large amounts of data (i.e. lots
 of recordings), which can be challenge to analyzed manually by human
 observers. As a result, a growing number of computational tools for the
 analysis of acoustic features on those signals is increasingly available
-(reviewd by <span class="citation">Stowell (<a href="#ref-Stowell2022" role="doc-biblioref">2022</a>)</span>), reflecting the need of automated
+(reviewed by <span class="citation">Stowell (<a href="#ref-Stowell2022" role="doc-biblioref">2022</a>)</span>), reflecting the need of automated
 approaches for efficiently conducting these analyses.</p>
 <!-- Many of these tools are supplied in the form of freely available software written on programming environments familiar to the scientific community (seewave, warbleR, scikit-mad), further simplifying their implementation for research. -->
 <!-- Bioacoustic research can easily generate large amounts of data, which sometimes may proof challenging to analyze in a timely manner. Annotations that require precise location of signals in frequency and time, most commonly used in behavioral and phenotypic evolution research, remain among the most time consuming phases of analysis for this type of data. Fortunately, several tools have been develop to assist researchers in this matter. Indeed, new methods for automatic annotation of acoustic signals are continuously developed . -->
@@ -2907,13 +2907,6 @@ test_ref &lt;- manual_ref_tae[manual_ref_tae$sound.files %in% test_files, ]</cod
 for all possible combinations of tuning parameters. The code below tries
 three minimum duration and maximum duration values and two hold time
 values (which merges signals within the specified time interval):</p>
-<pre class="r"><code>feature_reference(test_ref)</code></pre>
-<pre><code>##                min   mean     max
-## sel.duration 23.42 102.18  319.41
-## gap.duration 80.19 355.84 3024.23
-## annotations   2.00  32.40   66.00
-## bottom.freq   0.50   0.50    0.50
-## top.freq     10.00  10.00   10.00</code></pre>
 <pre class="r"><code>opt_det_train &lt;- optimize_energy_detector(
   reference = train_ref, 
   files = train_files, 

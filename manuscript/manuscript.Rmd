@@ -2,15 +2,15 @@
 title: 'ohun: an R package for optimizing automatic acoustic signal detection'
 author:
 output:
-  word_document:
-    toc: yes
-    toc_depth: '3'
   html_document:
     toc: yes
     toc_depth: 3
     toc_float:
       collapsed: no
       smooth_scroll: no
+  word_document:
+    toc: yes
+    toc_depth: '3'
   pdf_document:
     toc: yes
     toc_depth: '3'
@@ -529,11 +529,6 @@ test_ref <- manual_ref_tae[manual_ref_tae$sound.files %in% test_files, ]
 
 
 Now we can optimize the detection parameters using the function `optimize_energy_detector`. This function runs a detection for all possible combinations of tuning parameters. The code below tries three minimum duration and maximum duration values and two hold time values (which merges signals within the specified time interval):
-
-```{r}
-feature_reference(test_ref)
-```
-
 
 ```{r  optimize automated detection, eval = FALSE, echo = TRUE}
 
