@@ -148,7 +148,6 @@ manual_ref_snr <- signal_2_noise(X = manual_ref, mar = 0.05)
 # select 1 example per sound file
 high_snr <- manual_ref_snr[ave(-manual_ref_snr$SNR, manual_ref_snr$sound.files, FUN = rank) <= 1, ]
 
-
 # create catalogs
 catalog(X = high_snr, flim = c(10, 45), nrow = 6, ncol = 5, ovlp = 90, height = 10, width = 20, same.time.scale = TRUE, mar = 0.005, wl = 512, gr = FALSE, spec.mar = 0, lab.mar = 0.001, rm.axes = TRUE, by.row = TRUE, box = FALSE, pal = viridis, collevels = seq(-100, 0, 5), labels = NULL)
 
