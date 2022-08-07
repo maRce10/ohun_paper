@@ -130,7 +130,8 @@ manual_ref_tae <- read.csv(file.path(rootdir, "/data/processed/taeniopygia", "ma
 
 Marcelo Araya-Salas ^1,^ ^2,^ ^3^ *,
 Grace Smith-Vidaurre ^4^,
-Gloriana Chaverri ^3^, ^5^ 
+Gloriana Chaverri ^3^, ^5^
+Juan Carlos Brenes ^1^ &
 Fabiola Chirino ^1^ &
 Alejandro Rico-Guevara ^6^
 
