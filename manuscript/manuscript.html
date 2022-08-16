@@ -12,7 +12,7 @@
 <meta name="author" content />
 
 
-<title>ohun: an R package for diagnosing and optimizing automatic sound event detection</title>
+<title>ohun: an R package for diagnosing and optimizing automated sound event detection</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -1762,7 +1762,7 @@ div.tocify {
 
 
 <h1 class="title toc-ignore">ohun: an R package for diagnosing and
-optimizing automatic sound event detection</h1>
+optimizing automated sound event detection</h1>
 <h4 class="author"></h4>
 
 </div>
@@ -1772,8 +1772,8 @@ optimizing automatic sound event detection</h1>
 <p>Marcelo Araya-Salas <sup>1,</sup> <sup>2,</sup> <sup>3</sup> *, Grace
 Smith-Vidaurre <sup>4,</sup> <sup>5,</sup> <sup>6</sup>, Gloriana
 Chaverri <sup>3</sup>, <sup>7</sup> Juan Carlos Brenes <sup>1</sup>
-&amp; Fabiola Chirino <sup>1</sup> &amp; Alejandro Rico-Guevara
-<sup>8,</sup> <sup>9</sup></p>
+Fabiola Chirino <sup>1</sup> &amp; Alejandro Rico-Guevara <sup>8,</sup>
+<sup>9</sup></p>
 <p> </p>
 <p><sup>1</sup> Centro de Investigación en Neurociencias, Universidad de
 Costa Rica, San José, Costa Rica</p>
@@ -1870,23 +1870,23 @@ detection tools might prove helpful to inform researchers’ decisions
 about which method better fits a given question and study system <span class="citation">(<a href="#ref-knight2017" role="doc-biblioref">Knight
 <em>et al.</em> 2017</a>)</span>. The performance of automated sound
 event detection routines have typically been evaluated using standard
-indices from signal detection theory <span class="citation">(<a href="#ref-knight2017" role="doc-biblioref">Knight <em>et al.</em>
-2017</a>; <a href="#ref-balantic2020" role="doc-biblioref">Balantic
-&amp; Donovan 2020</a>)</span>. In its basic form, performance is
-assessed by comparing the output of a detection routine against a ‘gold
-standard’ reference in which all the target sounds have been annotated
-(hereafter called ‘reference annotation’). This comparison facilitates
-quantifying the number of correctly detected sounds (true positives),
-wrongly detected sounds (false positives) and missed sounds (false
-negatives) as well as additional metrics derived from these indices
-(e.g. recall, precision). However, the fact that sound events are not
-being evaluated as discrete classification units (as opposed to for
-instance identifying species from pictures), but are rather embedded
-within a continuous string of sound, demand additional information to
-fully diagnose the temporal precision detection performance. This is
-particularly relevant when the precise time position of sounds is needed
-as is common when measuring the acoustic structure of sounds is the main
-goal <span class="citation">(<a href="#ref-Araya-Salas2017f" role="doc-biblioref">Araya-Salas &amp; Smith-Vidaurre 2017</a>)</span>.
+indices from signal detection theory <span class="citation">(<a href="#ref-macmillan2004" role="doc-biblioref">Macmillan &amp; Creelman
+2004</a>; <a href="#ref-knight2017" role="doc-biblioref">Knight <em>et
+al.</em> 2017</a>; <a href="#ref-balantic2020" role="doc-biblioref">Balantic &amp; Donovan 2020</a>)</span>. In its
+basic form, performance is assessed by comparing the output of a
+detection routine against a ‘gold standard’ reference in which all the
+target sounds have been annotated (hereafter called ‘reference
+annotation’). This comparison facilitates quantifying the number of
+correctly detected sounds (true positives), wrongly detected sounds
+(false positives) and missed sounds (false negatives) as well as
+additional metrics derived from these indices (e.g. recall, precision).
+However, the fact that sound events are not being evaluated as discrete
+classification units (as opposed to for instance identifying species
+from pictures), but are rather embedded within a continuous string of
+sound, demand additional information to fully diagnose the temporal
+precision detection performance. This is particularly relevant when the
+precise time position of sounds is needed as is common when measuring
+the acoustic structure of sounds is the main goal <span class="citation">(<a href="#ref-Araya-Salas2017f" role="doc-biblioref">Araya-Salas &amp; Smith-Vidaurre 2017</a>)</span>.
 For instance, the same signal can be detected as several separated
 sounds, the inferred time position can be offset from the the target
 signal position, or several sounds can be detected as a single one.
@@ -2097,7 +2097,7 @@ signal), false positives (FPs, noise incorrectly identified as
 ‘signal’), false negatives (FNs, sounds incorrectly identified as noise)
 and true negatives (TNs, background noise correctly identified as
 noise). However, TNs cannot always be easily defined in the context of
-sound event detection as noise cannot always be partitioned in discrete
+sound event detection as noise might not be partitioned in discrete
 units. Hence, the package makes use of TPs, FPs and FNs to calculate
 three additional indices that can further assist with evaluating the
 performance of a detection routine and are widely used in the context of
@@ -3951,6 +3951,11 @@ Toledo, L.F., Emmrich, M., Glaw, F., Haddad, C.F.B., Rödel, M.O. &amp;
 Vences, M. (2017). <em><a href="https://doi.org/10.11646/zootaxa.4251.1.1">The use of bioacoustics
 in anuran taxonomy: Theory, terminology, methods and recommendations for
 best practice</a></em>.
+</div>
+<div id="ref-macmillan2004" class="csl-entry">
+Macmillan, N.A. &amp; Creelman, C.D. (2004). <a href="https://doi.org/10.4324/9781410611147/DETECTION-THEORY-NEIL-MACMILLAN-DOUGLAS-CREELMAN">Detection
+theory: A user’s guide: 2nd edition</a>. <em>Detection Theory: A User’s
+Guide: 2nd edition</em>, 1–445.
 </div>
 <div id="ref-Medina-Garcia2015a" class="csl-entry">
 Medina-García, A., Araya-Salas, M. &amp; Wright, T.F. (2015). Does vocal
