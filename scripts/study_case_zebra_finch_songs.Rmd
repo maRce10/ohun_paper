@@ -1,0 +1,288 @@
+---
+title: <center><font size="6"><b>Energy-based automatic detection on zebra finch songs</b></font></center>
+subtitle: <center><font size="4"><b>ohun</b></font></center>
+author: <center><font size="4"><a href="http://marceloarayasalas.weebly.com/">Marcelo Araya-Salas, PhD</a></font></center>
+date: <center>`r format(Sys.Date(), "%d-%m-%Y")`</center>
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: no
+      smooth_scroll: no
+fontsize: 12pt 
+editor_options: 
+  chunk_output_type: console
+---
+
+&nbsp;
+
+<div class="alert alert-info">
+
+### Purpose
+
+- Showcase energy-based automatic detection with the R package ohun using zebra-finch songs
+
+</div>
+
+&nbsp;
+
+<div class="alert alert-warning">
+
+### Data set
+
+The data used in this tutorial (annotations and recordings) can be downloaded from here:
+
+- [https://figshare.com/ndownloader/files/38431340](https://figshare.com/ndownloader/files/38431340)
+
+</div>
+
+&nbsp;
+
+
+```{r setup, include = FALSE}
+
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+
+knitr::opts_chunk$set(include = TRUE, eval = TRUE)
+
+data_path <- raw_data_path <- "data/raw/taeniopygia"
+
+preproc_path <- "data/processed/taeniopygia"
+
+figure_path <- "data/processed/taeniopygia/figures"
+
+```
+
+### Load package
+```{r libraries, eval = TRUE, echo = FALSE, message=FALSE, warning=FALSE}
+
+x <- c("ohun", "Rraven", "warbleR", "pbapply", "remotes", "DT")
+
+out <- lapply(x, function(y) {
+  
+  # check if installed, if not then install 
+  if (!y %in% installed.packages()[,"Package"]) 
+    install.packages(y) 
+
+  # load package
+  try(require(y, character.only = T), silent = T)
+})
+
+```
+
+```{r, message=FALSE, warning=FALSE}
+library(ohun)
+
+library(warbleR)
+
+library(viridis)
+```
+
+&nbsp;
+
+### Set directory where the sound files and annotations are found
+
+```{r, eval = FALSE, echo = TRUE}
+
+data_path <- "DIRECTORY_WITH_SOUND_FILES_AND_ANNOTATIONS_HERE"
+
+```
+
+
+&nbsp;
+
+### Read reference annotations
+```{r, eval = TRUE, echo = FALSE}
+
+manual_ref <- read.csv(file.path("data/processed/taeniopygia", "manual_selections_Taeniopygia.csv"))
+
+```
+
+```{r, eval = FALSE, echo = TRUE}
+
+manual_ref <- read.csv(file.path(data_path, "manual_selections_Taeniopygia.csv"))
+
+```
+
+&nbsp;
+
+### Create spectrograms to explore vocalization structure
+
+This code creates a multipanel image with multiple spectrograms, one for each of the individuals/recordings in the complete data set
+```{r Create catalogs, eval = FALSE}
+
+# select highest signal to noise ratio calls per individual
+manual_ref_snr <- signal_2_noise(X = manual_ref, mar = 0.05, path = data_path)
+
+# select 1 example per sound file
+high_snr <- manual_ref_snr[ave(-manual_ref_snr$SNR, manual_ref_snr$sound.files, FUN = rank) <= 1, ]
+
+high_snr$bottom.freq <- -1
+high_snr$top.freq <- 12
+
+# create catalogs
+catalog(X = high_snr, flim = c(0, 11), nrow = 6, ncol = 3, ovlp = 90, height = 15, width = 20, same.time.scale = TRUE, mar = 0.01, wl = 512, gr = FALSE, spec.mar = 0, lab.mar = 0.001, rm.axes = TRUE, by.row = TRUE, box = TRUE, pal = viridis, parallel = 10, collevels = seq(-140, 0, 5), path = data_path, img.prefix = "same.time", highlight = TRUE, alpha = 0.2)
+
+```
+
+```{r catalog, out.width = "100%", echo = FALSE, fig.align= "center"}
+
+knitr::include_graphics(normalizePath(file.path(data_path, "Catalog_p1.jpeg")))
+
+```
+
+&nbsp;
+
+### Split reference annotations for training and testing detection
+```{r trains set, eval = FALSE, echo = FALSE}
+
+# train set must be this one
+train_files <- c(
+  "BRN7_43435.27985312_12_1_7_46_25.wav",
+  "db1_43427.28100313_11_23_7_48_20.wav",
+  "Gry35HP_43455.29800260_12_21_8_16_40.wav"
+)
+
+```
+
+```{r test and train, eval = TRUE, echo = TRUE}
+
+set.seed(450)    
+train_files <- sample(unique(manual_ref$sound.files), 3)    
+
+test_files <- setdiff(manual_ref$sound.files, train_files)
+
+train_ref <- manual_ref[manual_ref$sound.files %in% train_files, ]
+test_ref <- manual_ref[manual_ref$sound.files %in% test_files, ]
+```
+
+&nbsp;
+
+### Optimize detection on training data
+```{r  optimize automated detection, eval = FALSE, echo = TRUE}
+
+opt_det <- optimize_energy_detector(
+  reference = train_ref, 
+  files = train_files, 
+  threshold = c(1, 5), 
+  hop.size = 11.6, 
+  smooth = c(5, 10), 
+  hold.time = c(0, 5), 
+  min.duration = c(5, 15, 25), 
+  max.duration = c(275, 300, 325), 
+  bp = c(0.5, 10),
+  path = data_path
+)
+
+```
+
+```{r  save optimized automated detection, eval = FALSE, echo = FALSE}
+
+write.csv(opt_det, file.path(preproc_path, "detection_optimization.csv"), row.names = FALSE)
+```
+
+&nbsp;
+
+### Check subset with highest performance (sorted by f1 score)
+```{r, eval = FALSE}
+
+# subset with highest performance
+sub_opt_det <- opt_det[order(opt_det$f1.score, decreasing = TRUE), ]
+
+sub_opt_det <- sub_opt_det[1:10, c("threshold", "smooth", "hold.time", "min.duration", "max.duration", "true.positives", "false.positives",  "false.negatives", "recall", "precision", "f1.score")]
+
+#print 
+sub_opt_det
+
+```
+
+```{r, eval = TRUE, echo = FALSE}
+
+opt_det <- read.csv(file.path(preproc_path, "detection_optimization.csv"))
+
+# subset with highest performance
+sub_opt_det <- opt_det[order(opt_det$f1.score, decreasing = TRUE), ]
+
+sub_opt_det <- sub_opt_det[1:10, c("threshold", "smooth", "hold.time", "min.duration", "max.duration", "true.positives", "false.positives",  "false.negatives", "recall", "precision", "f1.score")]
+
+# print dynamic table
+oa_DT <- datatable(sub_opt_det, editable = list(target = "row"), rownames = FALSE, style = "bootstrap",
+    filter = "top", options = list(pageLength = 100, autoWidth = TRUE, dom = "ft"),
+    autoHideNavigation = TRUE, escape = FALSE)
+
+formatRound(table = oa_DT, columns = sapply(sub_opt_det, is.numeric), 3)
+```
+
+&nbsp;
+
+### Select the highest performance parameters based on f1 score
+```{r, select best params, eval = TRUE, echo = TRUE}
+
+best_param <- opt_det[which.max(opt_det$f1.score), ]
+
+best_param
+```
+
+&nbsp;
+
+### Run detection on test data
+```{r, detect on all data, eval = FALSE, echo = TRUE}
+
+det_test <- energy_detector(
+  files = test_files, 
+  threshold = best_param$threshold, 
+  hop.size = 11.6, 
+  smooth = best_param$smooth, 
+  hold.time = best_param$hold.time, 
+  min.duration = best_param$min.duration, 
+  max.duration = best_param$max.duration, 
+  bp = c(0.5, 10), 
+  path = data_path
+)
+```
+
+
+```{r , eval = FALSE, echo = FALSE}
+
+write.csv(det_test, file.path(preproc_path, "detection_test_data.csv"), row.names = FALSE)
+
+```
+
+&nbsp;
+
+### Evaluate detection performance
+
+```{r , eval = TRUE, echo = FALSE}
+
+det_test <- read.csv(file.path(preproc_path, "detection_test_data.csv"))
+
+```
+
+```{r, diagnose, eval = TRUE, echo = TRUE}
+
+diagnose_detection(reference = test_ref, detection = det_test, by.sound.file = FALSE)
+
+```
+
+&nbsp;
+
+<div class="alert alert-info">
+
+### Takeaways
+
+- Good performance on detecting zebra finch songs: F1 score was 0.95 for the training data set and 0.96 for the testing data 
+
+</div>
+
+&nbsp;
+
+---
+
+<font size="4">Session information</font>
+
+```{r session info, echo=F}
+
+sessionInfo()
+
+```
