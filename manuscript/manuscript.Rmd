@@ -2,18 +2,18 @@
 title: 'ohun: an R package for diagnosing and optimizing automated sound event detection'
 author:
 output:
+  word_document:
+    toc: no
+    toc_depth: '3'
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
   html_document:
     toc: yes
     toc_depth: 3
     toc_float:
       collapsed: no
       smooth_scroll: no
-  word_document:
-    toc: yes
-    toc_depth: '3'
-  pdf_document:
-    toc: yes
-    toc_depth: '3'
 always_allow_html: yes
 bibliography: references.bib
 citation-style: methods-in-ecology-and-evolution.csl
@@ -81,6 +81,14 @@ if (is(rootdir, "try-error")) rootdir <-  ".."
 
 opts_knit$set(root.dir = rootdir)
 
+# options to customize chunk outputs
+knitr::opts_chunk$set(
+  class.source = "numberLines lineAnchors", # for code line numbers
+  tidy.opts = list(width.cutoff = 65), 
+  tidy = TRUE,
+  message = FALSE,
+  warning = FALSE
+ )
 ```
 
 ```{r, fixing citation .bib files, eval = TRUE, echo = FALSE, message=FALSE, warning=FALSE}
@@ -168,7 +176,7 @@ Alejandro Rico-Guevara ^8,^ ^9^
 
 &nbsp;
 
-```{r word count, eval = TRUE, echo = FALSE, results='asis'}
+```{r word count, eval = FALSE, echo = FALSE, results='asis'}
 
 # word count without code chunks
 word_count <- rmdcount(whereami::thisfile())
@@ -243,7 +251,7 @@ head(split_info)
 
 split_info <- read.csv(file.path(rootdir, "data/processed/split_data_for_manuscript.csv"))
 
-head(split_info)
+as.matrix(split_info[1:6,])
 ```
 
 The output shows the time segments in the original sound files to which the clips belong to. If an annotation table is supplied (argument 'X') the function will adjust the annotations so they refer to the position of the sounds in the clips. This can be helpful when reference tables have been annotated on the original sound files.   
@@ -302,23 +310,32 @@ diagnose_detection(reference = manual_ref_tae, detection = raven_detec, by = "tu
 
 ```
 
-```{r, eval = TRUE, echo = TRUE}
+```{r, eval = TRUE, echo = FALSE}
 
 raven_detec <- read.csv("./data/processed/combined_raven_detection.csv")
 
-diagnose_detection(reference = manual_ref_tae, detection = raven_detec, by = "tuning_parameters")
+dd <- diagnose_detection(reference = manual_ref_tae, detection = raven_detec, by = "tuning_parameters")
+
+as.matrix(dd)
 
 ```
 
 The output shows the indices described above. Plus three additional metrics specific to sound event detection: 'split positives', 'merge positives' and 'overlap to true positives'. 'Split positives' is the number of reference sounds overlapped by more than one detection, 'merge positives' the number of detected sounds overlapping with another detection and 'overlap to true positives' quantifies the mean overlap between detections and reference signal (1 means complete overlap). The function also allows to detail those indices by sound file. Here we show the first 10 files:  
 
-```{r, eval = TRUE, echo = TRUE}
+```{r, eval = FALSE, echo = TRUE}
 
 diag_raven <- diagnose_detection(reference = manual_ref_tae, detection = raven_detec, by = "tuning_parameters", by.sound.file = TRUE)
 
 head(diag_raven, 10)
 ```
 
+```{r, eval = TRUE, echo = TRUE}
+
+diag_raven <- diagnose_detection(reference = manual_ref_tae, detection = raven_detec, by = "tuning_parameters", by.sound.file = TRUE)
+
+as.matrix(diag_raven[1:10, ])
+
+```
 Diagnostics from routines using different tuning parameters can be used to identify the parameter values that optimize detection. These process of evaluating different routines for detection optimization is incorporated into the two signal detection approaches provided natively by *ohun*, which we depict in the following section. Note that the detection with Raven Pro does not necessarily reflect the best performance of this software and has been included only as an example on evaluating detection from external sources, rather than a direct comparison of performance between Raven Pro and *ohun*. 
 
 ## Signal detection with *ohun*
@@ -379,6 +396,7 @@ test_files <- setdiff(manual_ref_thy$sound.files, train_files)
 test_ref <- manual_ref_thy[manual_ref_thy$sound.files %in% test_files, ]
 
 source("~/Dropbox/R_package_testing/ohun/R/get_templates.R")
+source("~/Dropbox/R_package_testing/ohun/R/internal_functions.R")
 
 templates <- get_templates(train_ref, path = file.path(rootdir, "/data/raw/thyroptera/"),  bp = c(10, 50), ovlp = 70, wl = 200, n.sub.spaces = 3)
 
@@ -490,7 +508,9 @@ diagnose_detection(reference = test_ref, detection = detec_test)
 
 detec_test <- readRDS(file.path(rootdir, "/data/processed/detection_thyroptera_all_67%_template.RDS"))
 
-diagnose_detection(reference = test_ref, detection = detec_test)
+dd <- diagnose_detection(reference = test_ref, detection = detec_test)
+
+as.matrix(dd)
 ```
 
 The last line of codes evaluates the detection on the test data set, which shows a good performance for both recall and precision. 
@@ -570,7 +590,7 @@ sub_opt_det_train <- opt_det_train[order(opt_det_train$f1.score, decreasing = TR
 
 sub_opt_det_train <- sub_opt_det_train[1:10, c("threshold", "smooth", "hold.time", "min.duration", "max.duration", "true.positives", "false.positives",  "false.negatives", "recall", "precision", "f1.score")]
 
-sub_opt_det_train
+as.matrix(sub_opt_det_train)
 ```
 
 

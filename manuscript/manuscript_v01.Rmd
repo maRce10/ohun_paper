@@ -1,0 +1,714 @@
+---
+title: 'ohun: an R package for diagnosing and optimizing automated sound event detection'
+author:
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: no
+      smooth_scroll: no
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+  word_document:
+    toc: no
+    toc_depth: '3'
+always_allow_html: yes
+bibliography: references.bib
+citation-style: methods-in-ecology-and-evolution.csl
+link-citations: yes
+editor_options:
+  chunk_output_type: console
+---
+
+```{r load packages, echo = FALSE, message = FALSE, warning=FALSE}
+
+# github packages must include user name ("user/package")
+# knitr is require for creating html/pdf/word reports
+# kableExtra is used to print pretty formatted tables 
+# formatR is used for soft-wrapping code
+# klippy is used for adding a copy button to each code block
+
+pkgs <- c("kableExtra", "knitr", "rprojroot", "sciRmdTheme", "rmdwc", "whereami", "maRce10/ohun", "ggplot2", "viridis", "rmdwc", "RefManageR", "bibtex")
+
+# install/ load packages
+out <- lapply(pkgs, function(y) {
+  
+  # get pakage name
+  pkg <- strsplit(y, "/")[[1]]
+  pkg <- pkg[length(pkg)]
+  
+  # check if installed, if not then install 
+  if (!pkg %in% installed.packages()[,"Package"])  {
+
+      if (grepl("/", y))  remotes::install_github(y, force = TRUE) else
+    install.packages(y) 
+    }
+
+  # load package
+  a <- try(require(pkg, character.only = T), silent = T)
+
+  if (!a) remove.packages(pkg)
+  })
+
+```
+
+```{r theme setting, echo=FALSE}
+# simplest default settings
+sciRmdTheme::set.theme()
+```
+
+```{r custom data frame printing, echo = FALSE, message=FALSE}
+
+# this is a customized printing style data frames 
+# screws up tibble function
+tibble <- function(x, ...) { 
+  x <- kbl(x, digits=3, align= 'c', row.names = FALSE) 
+   x <- kable_styling(x, position ="center", full_width = FALSE,  bootstrap_options = c("striped", "hover", "condensed", "responsive")) 
+   asis_output(x)
+}
+
+registerS3method("knit_print", "data.frame", tibble)
+
+```
+
+```{r set working directory, echo=FALSE}
+
+# set working directory as project directory or one directory above,
+rootdir <- try(rprojroot::find_rstudio_root_file(), silent = TRUE)
+if (is(rootdir, "try-error")) rootdir <-  ".."
+
+opts_knit$set(root.dir = rootdir)
+
+# options to customize chunk outputs
+knitr::opts_chunk$set(
+  class.source = "numberLines lineAnchors", # for code line numbers
+  tidy.opts = list(width.cutoff = 65), 
+  tidy = TRUE,
+  message = TRUE,
+  warning = FALSE
+ )
+```
+
+```{r, fixing citation .bib files, eval = TRUE, echo = FALSE, message=FALSE, warning=FALSE}
+
+# how to cite in Rmarkdown:
+# https://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html
+
+# find citation style files (csl) here:
+# https://github.com/stackpr/csl-styles
+
+# Here include the path to the libraries for each author. This code will copy/update the library each time the Rmarkdown file is compiled
+# Alternatively authors ca
+personal_libraries <- c(author_1 = "/home/m/Documents/mendeley_libraries/ohun_paper.bib", author_2 = "/home/neuro/Documents/export.bib")
+
+# location of current Rmarkdown
+if (!is.null(whereami::thisfile()))
+    rmd_dir <- dirname(whereami::thisfile()) else
+        rmd_dir <- NULL
+if (is.null(rmd_dir)) rmd_dir <- file.path(rootdir, "manuscript")
+
+# read personal library
+personal_libraries <- personal_libraries[file.exists(personal_libraries)]
+
+if (length(personal_libraries) > 0){
+personal_bib <- suppressMessages(ReadBib(personal_libraries))
+
+# read paper's references.bib if it exists
+if (file.exists(file.path(rootdir, "references.bib"))){
+    combined_bib <- suppressMessages(ReadBib(file.path(rmd_dir, "references.bib")))
+    
+    merge_bib <- suppressMessages(merge(personal_bib, combined_bib, fields.to.check = "title", ignore.case = TRUE))
+} else
+    merge_bib <- personal_bib
+    
+# save combined references
+WriteBib(bib = merge_bib, file = file.path(rmd_dir, "references.bib"), biblatex = TRUE)
+}
+```
+
+```{r read data, echo=FALSE}
+
+path_zebra_finch <- file.path(rootdir, "data/raw/taeniopygia/")
+
+# read data
+manual_ref_thy <- read.csv(file.path(rootdir, "//data/raw/thyroptera/", "manual_annotations_thyroptera.csv"))
+
+manual_ref_tae <- read.csv(file.path(rootdir, "/data/processed/taeniopygia", "manual_selections_Taeniopygia.csv"))
+
+```
+
+Marcelo Araya-Salas ^1,^ ^2,^ ^3^ *,
+Grace Smith-Vidaurre ^4,^ ^5,^ ^6^, 
+Gloriana Chaverri ^3^, ^7^
+Juan Carlos Brenes ^1^
+Fabiola Chirino ^1^ &
+Alejandro Rico-Guevara ^8,^ ^9^
+
+&nbsp;
+
+^1^ Centro de Investigación en Neurociencias, Universidad de Costa Rica, San José, Costa Rica
+
+^2^ Escuela de Biología, Universidad de Costa Rica, San José, Costa Rica
+
+^3^ Sede del Sur, Universidad de Costa Rica, Golfito, Costa Rica
+
+^4^ Laboratory of Neurogenetics of Language, Rockefeller University, New York, NY, USA
+
+^5^ Rockefeller University Field Center, Millbrook, NY, USA
+
+^6^ Department of Biological Sciences, University of Cincinnati, Cincinnati, OH, USA
+
+^7^  Smithsonian Tropical Research Institute, Panama City, Panamá
+
+^8^  Department of Biology, University of Washington, Seattle, USA
+
+^9^ Burke Museum of Natural History and Culture, University of Washington, Seattle, USA
+
+\* *To whom correspondence should be addressed*
+
+
+**Keywords**: bioacoustics, automatic detection, animal vocalizations
+
+
+---
+
+&nbsp;
+
+```{r word count, eval = FALSE, echo = FALSE, results='asis'}
+
+# word count without code chunks
+word_count <- rmdcount(whereami::thisfile())
+
+# word count with code chunks
+word_count_chunk <- rmdcount(whereami::thisfile(), exclude='')
+
+# print results
+cat(paste0("Word count: ", word_count[3], " (including code chunks: ", word_count_chunk[3], ")"))
+
+```
+
+Check [this link](https://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html) for details on how to add citations/bibliography in Rmarkdown
+
+---
+
+## Abstract
+
+
+Animal acoustic signals are widely used in diverse research areas due to the relative ease with which sounds can be registered across a wide range of taxonomic groups and research settings. However, bioacoustics research can quickly generate large data sets, which might prove challenging to analyze promptly. Although many tools are available for the automated detection of sounds, choosing the right approach can be difficult only a few tools provide a framework for evaluating detection performance. Here we present ohun, an R package intended to facilitate automated sound detection. ohun provides functions to diagnose and optimize detection routines and compare performance among different detection approaches. The package uses reference annotations containing the time position of target sounds in a training data set to evaluate detection routines performance using common signal detection theory indices. This can be done both with routine outputs imported from other software and detections run within the package. The package also provides functions to organize acoustic data sets in a format amenable to detection analyses. ohun also includes energy-based and template-based detection methods –two commonly used automatic approaches in bioacoustic research. We show how ohun automatically can be used to  detect vocal signals with case studies of adult male zebra finch (Taenopygia gutata) songs and Spix’s disc-winged bat (Thyroptera tricolor) ultrasonic social calls. We also include examples of how to evaluate the detection performance of ohun and external software. Finally, we provide some general suggestions to improve detection performance.
+
+
+## Introduction
+
+Animal acoustic signals are widely used to address a variety of questions in highly diverse areas, ranging from neurobiology [@Burgdorf2011; @schoneich2020] to taxonomy [@Kohler2017; @gew2019], community ecology [@zsebok2021; @tiwari2022] and evolutionary biology [@Odom2021; @Medina-Garcia2015a]. The profuse usage of animal sounds in research is partly due to the fact that they can be easily collected using non-invasive methods. Animal sounds can also be obtained in a variety of settings from laboratories to natural areas, while the equipment required for collecting an analyzing these sounds has become increasingly inexpensive and broadly accesible [@Blumstein2011; @sugai2019]. In addition, the existence of online repositories has facilitated the study of these communication signals at larger taxonomic and geographic scales. However, the adoption of bioacustic approaches in research may also imply large amounts of data (i.e. lots of recordings), which can be challenging to analyzed manually [@gibb2019]. As a result, a growing number of computational tools for the automatic detection of animal sounds on is increasingly available [reviewed by @Stowell2022], reflecting the need of automated approaches for efficiently conducting these analyses [@gibb2019]. 
+
+<!-- Many of these tools are supplied in the form of freely available software written on programming environments familiar to the scientific community (seewave, warbleR, scikit-mad), further simplifying their implementation for research. -->
+<!-- Bioacoustic research can easily generate large amounts of data, which sometimes may proof challenging to analyze in a timely manner. Annotations that require precise location of signals in frequency and time, most commonly used in behavioral and phenotypic evolution research, remain among the most time consuming phases of analysis for this type of data. Fortunately, several tools have been develop to assist researchers in this matter. Indeed, new methods for automatic annotation of sound events are continuously developed . -->
+
+The growing availability of tools for automatic detection of acoustic events, particularly as free software, is expected to further simplify acoustic data processing, making it accessible to a wider range of users and scientific questions. However, this diversity of automated detection tools also posits a challenge as it can be difficult to navigate [@Stowell2022]. In this regard, the use of standard approaches for evaluating the performance of automatic detection tools might prove helpful to inform researchers’ decisions about which method better fits a given question and study system [@knight2017]. The performance of automated sound event detection routines have typically been evaluated using standard indices from signal detection theory [@macmillan2004; @balantic2020; @knight2017]. In its basic form, performance is assessed by comparing the output of a detection routine against a 'gold standard' reference in which all the target sounds have been annotated (hereafter called 'reference annotation'). This comparison facilitates quantifying the number of correctly detected sounds (true positives), wrongly detected sounds (false positives) and missed sounds (false negatives) as well as additional metrics derived from these indices (e.g. recall, precision). However, the fact that sound events are not being evaluated as discrete classification units (as opposed to for instance identifying species from pictures), but are rather embedded within a continuous string of sound, demand additional information to fully diagnose the temporal precision detection performance. This is particularly relevant when the precise time position of sounds is needed as is common when measuring the acoustic structure of sounds is the main goal [@Araya-Salas2017f]. For instance, the same signal can be detected as several separated sounds, the inferred time position can be offset from the the target signal position, or several sounds can be detected as a single one. Therefore, metrics that account for these additional performance dimensions are a valuable tool to properly diagnose automatic sound event detection.
+    
+Here we present the new R package *ohun*. This package is intended to facilitate the automatic detection of sound events, providing functions to diagnose particular aspects of acoustic detection routines in order to simplify their optimization. The package makes use of reference annotations containing the time position of target sounds that along with the corresponding sound files, serves as a training data set in which to evaluate the performance of detection routines. This can be done with routine outputs imported from other software as well as detection routines run within the *ohun* package itself. The package also provides a set of functions to explore acoustic data sets and organize them in a format amenable for detection analyses. In addition, it offers implementations of two automatic detection methods commonly used in bioacoustic analysis: energy-based detection and template-based detection [@avi2014; @Hafner2015; @mellinger2000; @Charif2010; @aide2013]. We explain how to explore and format acoustic data sets, how sound event detection routines can be evaluated and then showcase the package usage with study cases on male Zebra-finch songs (*Taenopygia gutata*) and Spix's disc-winged bat calls (*Thyroptera tricolor*) which represent different recording settings (lab and flight cages) and signal types (sonic mating sounds and ultrasonic social calls).          
+
+## Formatting acoustic data sets
+
+The format and size of the acoustic data to be analyzed is important to validate and standardize in order to  avoid downstream errors, as well as to inform expectations for computational time performance. Several functions in *ohun* can facilitate double-checking the format of acoustic data sets prior to automatic detection. The function `feature_acoustic_data` prints a summary of the duration, size and format of all the recordings in a folder. Here we explore the acoustic data set of zebra finch's songs (Supporting Information):
+
+```{r, eval = FALSE, echo = TRUE}
+
+# working directory
+path_zebra_finch <- "path_to_zebra_finch_files"
+
+feature_acoustic_data(path = path_zebra_finch)
+
+```
+
+```{r, eval = TRUE, echo = FALSE}
+
+feature_acoustic_data(path = path_zebra_finch)
+
+```
+
+In this case all recordings have the same format (.wav files, 44.1 kHz sampling rate, 16 bit resolution and a single channel). We can also check the duration and size of files. Format information is important as some tuning parameters of detection routines can behave differently depending on file format (*e.g.* time window size can be affected by sampling rate) or simply because some software might only work on specific sound file formats. In addition, long sound files could be hard to analyze in some computers and might have to be split into shorter clips. In the latter case the function `split_acoustic_data` can be used to produce those clips:
+
+```{r, eval = FALSE, echo = FALSE}
+source("~/Dropbox/R_package_testing/ohun/R/split_acoustic_data.R")
+source("~/Dropbox/R_package_testing/ohun/R/diagnose_detection.R")
+source("~/Dropbox/R_package_testing/ohun/R/label_detection.R")
+split_info <- split_acoustic_data(path = path_zebra_finch, sgmt.dur = 5)
+
+write.csv(split_info, "./data/processed/split_data_for_manuscript.csv", row.names = FALSE)
+
+```
+
+```{r, eval = FALSE, echo = TRUE}
+
+split_info <- split_acoustic_data(path = path_zebra_finch, sgmt.dur = 5)
+
+head(split_info)
+
+```
+
+```{r, eval = TRUE, echo=FALSE}
+
+split_info <- read.csv(file.path(rootdir, "data/processed/split_data_for_manuscript.csv"))
+
+as.matrix(split_info[1:6,])
+```
+
+The output shows the time segments in the original sound files to which the clips belong to. If an annotation table is supplied (argument 'X') the function will adjust the annotations so they refer to the position of the sounds in the clips. This can be helpful when reference tables have been annotated on the original sound files.   
+
+Annotations can also be explored using the function `feature_reference`, which returns the mean and range of signal duration and gap duration (time intervals between selections), bottom and top frequency and of the number of annotations by sound file. If the path to the sound files is supplied, then the duty cycle (the fraction of a sound file corresponding to sounds) and peak amplitude (the highest amplitude in a detection) are also returned:
+
+```{r, eval = FALSE, echo = TRUE}
+
+# read reference annotations
+manual_ref_tae <- read.csv(file.path(path_zebra_finch, "manual_selections_Taeniopygia.csv"))
+
+# explore annotations
+feature_reference(reference = manual_ref_tae, path = path_zebra_finch)
+
+```
+
+```{r, eval = TRUE, echo = FALSE}
+
+manual_ref_tae <- read.csv(file.path(rootdir, "/data/processed/taeniopygia", "manual_selections_Taeniopygia.csv"))
+
+
+feature_reference(reference = manual_ref_tae, path = path_zebra_finch)
+
+```
+
+
+## Diagnosing detection performance
+
+The *ohun* package makes use of signal detection theory indices to evaluate detection performance. Signal detection theory deals with the process of recovering sounds (*i.e.* target sounds) from background noise (not necessarily acoustic noise) and it’s widely used for optimizing this decision making process in the presence of uncertainty [@hossin2015]. During a detection routine, the detected ‘items’ can be classified into 4 classes: true positives (TPs, target sounds correctly identified as signal), false positives (FPs, noise incorrectly identified as ‘signal’), false negatives (FNs, sounds incorrectly identified as noise) and true negatives (TNs, background noise correctly identified as noise). However, TNs cannot always be easily defined in the context of sound event detection as noise might not be partitioned in discrete units. Hence, the package makes use of TPs, FPs and FNs to calculate three additional indices that can further assist with evaluating the performance of a detection routine and are widely used in the context of sound event detection [@knight2017]: recall (correct detections relative to total detections), precision (proportion of target sounds that were correctly detected) and F1 score (combined recall and precision as the harmonic mean of these two, providing a single value for evaluating performance, a.k.a. F-score, F-measure or Dice similarity coefficient).
+
+A perfect detection will have no false positives or false negatives, which will result in both recall and precision equal to 1. However, perfect detection cannot always be achieved. Therefore, some compromise between detecting most target sounds plus some noise and excluding noise but missing target sounds might be warranted. These indices provide a useful framework for diagnosing and optimizing the performance of a detection routine. Researchers can identify an appropriate balance between these two extremes will be given by the relative costs of missing sounds and mistaking noise for target sounds in the context of their specific study goals.
+
+*ohun* offers tools to evaluate the performance of sound event detection methods based on the indices described above. To accomplish this, annotations derived from a detection routine are compared against a reference table containing the time position of all target sounds in the sound files. For instance, the following code evaluates a routine run in Raven Pro 1.6 [@Charif2010] using the "band limited energy detector" option (minimum frequency: 0.8 kHz; maximum frequency: 22 kHz; minimum duration: 0.03968 s; maximum duration: 0.54989s; minimum separation: 0.02268 s) on a subset of the zebra finch recordings described below:
+
+```{r read and save raven automatic detection selection files, eval = FALSE, echo = FALSE}
+
+library(Rraven)
+
+raven_detec <- imp_raven(path = file.path(rootdir, "/data/raw/"), files = c("22.kHz_sep.0.02322.selections.txt.txt", "15.kHz_sep.0.02322.selections.txt", "10.kHz_sep.0.02322.selections.txt", "10.kHz_sep.0.005.selections.txt"), warbler.format = TRUE)
+
+raven_detec$tuning_parameters <- gsub(".selections.txt", "", raven_detec$selec.file)
+raven_detec$tuning_parameters <- gsub("kHz_", "kHz; ", raven_detec$tuning_parameters)
+raven_detec$tuning_parameters <- gsub(".kHz", " kHz", raven_detec$tuning_parameters)
+raven_detec$tuning_parameters <- gsub("sep.", "sep: ", raven_detec$tuning_parameters)
+raven_detec$tuning_parameters <- paste0("band: 1-", raven_detec$tuning_parameters, " s")
+
+raven_detec <- raven_detec[, c("sound.files", "selec", "start", "end", "bottom.freq", "top.freq", "tuning_parameters")]
+
+write.csv(raven_detec, "./data/processed/combined_raven_detection.csv", row.names = FALSE)
+
+```
+
+```{r, eval = FALSE, echo = TRUE}
+raven_detec <- read.csv("combined_raven_detection.csv")
+
+head(raven_detec)
+```
+
+```{r, eval = TRUE, echo = FALSE}
+raven_detec <- read.csv("./data/processed/combined_raven_detection.csv")
+
+head(raven_detec)
+```
+
+```{r, eval = FALSE, echo = TRUE}
+diagnose_detection(reference = manual_ref_tae,
+                   detection = raven_detec,
+                   by = "tuning_parameters",
+                   min.overlap = 0.5)
+
+```
+
+```{r, eval = TRUE, echo = FALSE}
+
+diagnose_detection(reference = manual_ref_tae, detection = raven_detec, by = "tuning_parameters", min.overlap = 0.5)
+
+```
+
+The output shows the indices described above. Plus three additional metrics specific to sound event detection: 'split positives', 'merge positives' and 'overlap to true positives'. 'Split positives' is the number of reduntant detections (i.e. those overlapping sounds already overlapped by other detections) by more than one detection, 'merge positives' the number of detected sounds overlapping with another detection and 'overlap to true positives' quantifies the mean overlap between detections and reference signal (1 means complete overlap). 
+
+
+```{r, eval = FALSE, echo = TRUE}
+
+
+diag_raven <- diagnose_detection(reference = manual_ref_tae, detection = raven_detec, by = "tuning_parameters")
+
+head(diag_raven, 10)
+
+```
+
+```{r, eval = TRUE, echo = FALSE}
+
+diag_raven <- diagnose_detection(reference = manual_ref_tae, detection = raven_detec, by = "tuning_parameters", by.sound.file = TRUE)
+
+head(diag_raven, 10)
+
+```
+
+
+
+The function also allows to detail those indices by sound file. Here we show the first 10 files:  
+
+```{r, eval = FALSE, echo = TRUE}
+
+diag_raven <- diagnose_detection(reference = manual_ref_tae, detection = raven_detec, by = "tuning_parameters", by.sound.file = TRUE)
+
+head(diag_raven, 10)
+```
+
+```{r, eval = TRUE, echo = FALSE}
+
+diag_raven <- diagnose_detection(reference = manual_ref_tae, detection = raven_detec, by = "tuning_parameters", by.sound.file = TRUE)
+
+head(diag_raven, 10)
+
+```
+
+Diagnostics from routines using different tuning parameters can be used to identify the parameter values that optimize detection. These process of evaluating different routines for detection optimization is incorporated into the two signal detection approaches provided natively by *ohun*, which we depict in the following section. Note that the detection with Raven Pro does not necessarily reflect the best performance of this software and has been included only as an example on evaluating detection from external sources, rather than a direct comparison of performance between Raven Pro and *ohun*. 
+
+## Signal detection with *ohun*
+
+The package offers two methods for automated signal detection: template-based and energy-based detection. These methods are better suited for highly stereotyped or good signal-to-noise ratio (SNR) sounds, respectively. If the target sounds do not fit these requirements, more elaborate methods (i.e. machine/deep learning approaches) are warranted.
+
+
+## Study cases
+
+### Template detection on ultrasonic social calls of  Spix's disc-winged bats
+
+We recorded `r length(unique(manual_ref_thy$sound.files))` individuals of Spix's disc-winged bats (*Thyroptera tricolor*) at Baru Biological Station, in south-western Costa Rica in January 2020. Bats were captured at their roosting sites (furled leaves of Zingeberaceae plants). Each individual bat was released in a large flight cage (9 x 4 x 3 m) for a 5-minute period and their ultrasonic inquiry calls were recorded using a condenser microphone (CM16, Avisoft Bioacoustics, Glienike/Nordbahn, Germany) through an Avisoft UltraSoundGate 116Hm plugged into a laptop computer running Avisoft-Recorder software. Recordings were made at a sampling rate of 500 kHz and an amplitude resolution of 16 bits.
+
+Recordings were manually annotated using Raven Pro 1.6 [@Charif2010]. Annotations were created by visual inspection of spectrograms, in which the start and end of sounds were determined by the location of the continuous traces of power spectral entropy of the target sounds. A total of `r nrow(manual_ref_thy)` calls were annotated (~`r round(nrow(manual_ref_thy) / 30, 0)` calls per recording). Annotations were made with a time window of 200 samples and 70% of overlap, and were then imported into R using the package Rraven [@Araya-Salas2017e].   
+
+
+Inquiry calls of Spix's disc-winged bats are structurally stereotyped [@Chaverri2010b]. Most variation is found among individuals, although the basic form of a short, downward broadband frequency modulation is always shared (Fig. BAT-SPECTRO, Araya-Salas et al 2021 ontogeny).
+
+```{r catalog, out.width = "100%", echo = FALSE, fig.align= "left",fig.cap="Fig. BAT-SPECTRO. Example spectrograms of Spix's disc-winged social calls for each of the 30 recordings used in the analysis. The highest signal-to-noise ratio call by sound file are shown. The time scale range is 71 ms and the frequency range 10-44 kHz", error=TRUE}
+
+knitr::include_graphics(file.path(rootdir, "data/raw/thyroptera/Catalog_p1.jpeg"))
+
+```
+
+Template-based detection is a useful approach when there are minimal structural differences in the target sounds  [e.g. when signals are produced in a highly stereotyped manner, @balantic2020; @knight2017]. It uses spectrographic cross-correlation to find sounds resembling an example target sounds (i.e. template) across sound files, applying a correlation threshold to separate detections from background noise. We used this approach in *ohun* to detect inquiry calls. To do this, we tested the performance of three acoustic templates on a training subset of five sound files. First we used the function `get_templates` to find several sounds representative of the variation in signal structure. This function measures several spectral parameters which are then summarized using Principal Component Analysis. The first two components are used to project the acoustic space. In this space the function defines sub-spaces as equal-size slices of a sphere centered at the centroid of the acoustic space. Templates are then selected as those closer to the centroid within each of the sub-spaces, including the centroid for the entire acoustic space. The user needs to define the number of sub-spaces in which the acoustic space will be split. 
+
+```{r, eval = FALSE}
+
+# read manual annotations
+manual_ref_thy <- read.csv("manual_annotations_thyroptera.csv")
+
+# get random subset of 5 sound files for training
+set.seed(1)
+train_files <- sample(unique(manual_ref_thy$sound.files), size = 5)
+train_ref <- manual_ref_thy[manual_ref_thy$sound.files %in% train_files, ]
+
+# the rest for testin g
+test_files <- setdiff(manual_ref_thy$sound.files, train_files)
+test_ref <- manual_ref_thy[manual_ref_thy$sound.files %in% test_files, ]
+
+# find templates
+templates <- get_templates(train_ref, path = data_path,  bp = c(10, 50), ovlp = 70, wl = 200, n.sub.spaces = 3)
+
+```
+
+```{r, echo = FALSE, fig.height= 6, fig.cap= "FIG. ACOUSTIC-SPACE. Acoustic space defined as the the first two components of a Principal Component Analysis on spectrographic parameters. Templates are selected as those closer to the centroid for each of the sub-spaces. Gray dashed lines delimit the region of sub-spaces. Yellow circles around points highlight the position of the signals selected as templates."}
+
+# read manual annotations
+manual_ref_thy <- read.csv(file.path(rootdir, "/data/raw/thyroptera/", "manual_annotations_thyroptera.csv"))
+
+# get random subset of 5 sound files for training
+set.seed(1)
+train_files <- sample(unique(manual_ref_thy$sound.files), size = 5)
+train_ref <- manual_ref_thy[manual_ref_thy$sound.files %in% train_files, ]
+
+# the rest for testing
+test_files <- setdiff(manual_ref_thy$sound.files, train_files)
+test_ref <- manual_ref_thy[manual_ref_thy$sound.files %in% test_files, ]
+
+source("~/Dropbox/R_package_testing/ohun/R/get_templates.R")
+source("~/Dropbox/R_package_testing/ohun/R/internal_functions.R")
+
+templates <- get_templates(train_ref, path = file.path(rootdir, "/data/raw/thyroptera/"),  bp = c(10, 50), ovlp = 70, wl = 200, n.sub.spaces = 3)
+
+```
+
+
+```{r, eval = TRUE, echo = FALSE}
+
+data_path <- file.path(rootdir, "/data/raw/thyroptera/")
+
+manual_ref_thy <- read.csv(file.path(data_path, "manual_annotations_thyroptera.csv"))
+
+# get random subset of 5 sound files for training
+set.seed(1)
+train_files <- sample(unique(manual_ref_thy$sound.files), size = 5)
+train_ref <- manual_ref_thy[manual_ref_thy$sound.files %in% train_files, ]
+
+# the rest for testing
+test_files <- setdiff(manual_ref_thy$sound.files, train_files)
+test_ref <- manual_ref_thy[manual_ref_thy$sound.files %in% test_files, ]
+```
+
+The output of the `get_templates` function includes an acoustic space plot (FIG. ACOUSTIC-SPACE) in which the position of the sounds selected as templates is highlighted. Users can also provide their own acoustic space dimensions (argument 'acoustic.space'). In the following code we used those templates for detecting bat social calls. The code iterates a template-based detection on the training data set across a range of correlation thresholds, in order to find the combination of threshold and template with the best performance.
+
+```{r, eval = FALSE}
+
+# get correlation vectors
+corr_templ_train <- template_correlator(
+  templates = templates,
+    path = data_path, 
+  files = unique(train_ref$sound.files), 
+  hop.size = 10, 
+  ovlp = 70
+  )
+
+# evaluate detection for different correlation thresholds
+opt_detec_train <- optimize_template_detector(
+  reference = train_ref, 
+  template.correlations = corr_templ_train,
+  threshold = seq(0.05, 0.5, 0.01)
+  )
+
+```
+
+Note that the correlation vectors are estimated first (i.e. vectors of correlation values across sound files, `template_correlator()`) and then the correlation thresholds are optimized on these vectors (`optimize_template_detector()`). The output of `optimize_template_detector()` contains the detection performance indices for each combination of templates and thresholds. Table TEMPLATE PERFORMANCE shows the two highest performance runs for each template.
+
+```{r, eval = TRUE, echo = FALSE}
+
+opt_detec_train <- readRDS(file.path(rootdir, "/data//processed/optimization_results_3_templates_thyroptera.RDS"))
+
+# opt_detec_train <- opt_detec_train[order(opt_detec_train$templates, opt_detec_train$f.score, decreasing = TRUE), ]
+
+# sub_opt_detec_train <- opt_detec_train[ave(-opt_detec_train$f.score, opt_detec_train$templates, FUN = rank) <= 4, ]
+  
+sub_odt <- lapply(unique(opt_detec_train$templates), function(x) {
+    
+    X <- opt_detec_train[opt_detec_train$templates == x, ]
+    X <- X[order(X$f.score, decreasing = TRUE), ]
+    return(X[1:2, ])
+    })
+
+
+sub_opt_detec_train <- do.call(rbind, sub_odt)
+
+kbl <- kable(sub_opt_detec_train[, c("threshold", "templates", "true.positives", "false.positives", "false.negatives", "recall", "precision", "f.score")], row.names = FALSE, caption = "TABLE TEMPLATE PERFORMANCE. Performance diagnostic of template-based detections using four templates across several threshold values. Only the two highest performance iterations for each template are shown.", digits = 3)
+
+kable_styling(kbl, bootstrap_options = c("striped", "hover",  full_width = FALSE))
+
+```
+
+We can explore the performance of each template in more detail by looking at the change in F1 score across thresholds (FIG. THRESHOLD vs F.SCORE).
+
+```{r, eval = TRUE, echo = FALSE, fig.height= 3, fig.align='center', fig.cap= "FIG. THRESHOLD vs F.SCORE. Shows the changes in F1 score across the range of threshold values"}
+
+agg_f1 <- aggregate(f.score ~ threshold + templates, data = opt_detec_train,
+mean)
+
+ggplot(agg_f1, aes(x = threshold, y = f.score, group = templates, color = templates)) +
+    geom_line() + 
+    geom_point() + 
+    scale_color_viridis_d(end = 1, labels = c("Centroid", "1st", "2nd", "3rd"), alpha = 0.7) + 
+    labs(x= "Cross-correlation threshold", y = "F1 score", color = "Templates") 
+
+```
+
+In this example the "centroid" template, produced the best performance (TABLE TEMPLATE PERFORMANCE; FIG. THRESHOLD vs F.SCORE). Hence, we will use this template for detecting calls on the rest of the data. The following code extracts this template from the reference annotation table and use it to find inquiry calls on the testing data set:
+
+```{r, detect on all data 67, eval = FALSE, echo = TRUE}
+
+# get correlation vectors for test files
+corr_templ_test <- template_correlator(
+  templates = templates[templates$sound.file == "centroid", ],
+    path = data_path, files = unique(test_ref$sound.files), 
+  hop.size = 10, 
+  ovlp = 70
+  )
+
+# detect on test files
+detec_test <- template_detector(
+  template.correlations = corr_templ_test,
+    threshold = 0.45
+  )
+
+diagnose_detection(reference = test_ref, detection = detec_test)
+
+```
+
+```{r, eval = TRUE, echo = FALSE}
+
+detec_test <- readRDS(file.path(rootdir, "/data/processed/detection_thyroptera_all_67%_template.RDS"))
+
+diagnose_detection(reference = test_ref, detection = detec_test)
+
+```
+
+The last line of codes evaluates the detection on the test data set, which shows a good performance for both recall and precision. 
+
+### Energy-based detection on zebra finch vocalizations
+
+We used recordings from 18 zebra finch males recorded at obtained from the Rockefeller University Field Research Center Song Library [http://ofer.sci.ccny.cuny.edu/songs, @Tchernichovski2021]. Recordings contain undirected vocalizations (songs or calls) of single males recorded in sound attenuation chambers using Sound Analysis Pro. Zebra finch vocalizations are composed of multiple elements (i.e. distinct patterns of continuous traces of power spectral entropy in the spectrogram separated by time gaps) that can vary importantly in key features as duration and frequency range (ZEBRAFINCH-SPECTRO) and are clearly not as stereotyped as the Spix’s disc-winged bats. However, as the recorded sounds show a good signal-to-noise ratio, such that signals in each recording can potentially be detected using an energy-based approach that does not rely on matching the acoustic structure of a template.
+```{r catalog zebra f, out.width = "100%", echo = FALSE, fig.align= "left",fig.cap="Fig. ZEBRAFINCH-SPECTRO. Example spectrograms of male zebra finch songs for each of the 18 sound files used in the analysis. The highest signal-to-noise ratio call by sound file are shown. The time scale range is 359 ms and the frequency range 0-11 kHz. Signals have been highlighted for visualization purposes only.", error=TRUE}
+
+knitr::include_graphics(file.path(rootdir, "data/raw/taeniopygia/same.time-Catalog_p1.jpeg"))
+
+```
+
+Reference annotations were made manually on the oscillogram with the spectrogram and audio as a guide using Raven Lite 2.0.1 (Cornell Lab of Ornithology). The following code loads the reference annotations and split them into two data sets for training (3 sound files) and testing (15 sound files):
+```{r, eval = TRUE, echo = FALSE}
+
+manual_ref_tae <- read.csv(file.path(rootdir, "/data/processed/taeniopygia", "manual_selections_Taeniopygia.csv"))
+
+set.seed(450)    
+train_files <- sample(unique(manual_ref_tae$sound.files), 3)    
+
+test_files <- setdiff(manual_ref_tae$sound.files, train_files)
+
+train_ref <- manual_ref_tae[manual_ref_tae$sound.files %in% train_files, ]
+test_ref <- manual_ref_tae[manual_ref_tae$sound.files %in% test_files, ]
+
+```
+
+```{r, eval = FALSE, echo = TRUE}
+
+manual_ref_tae <- read.csv("manual_selections_Taeniopygia.csv")
+
+set.seed(450)    
+train_files <- sample(unique(manual_ref_tae$sound.files), 3)    
+test_files <- setdiff(manual_ref_tae$sound.files, train_files)
+
+train_ref <- manual_ref_tae[manual_ref_tae$sound.files %in% train_files, ]
+test_ref <- manual_ref_tae[manual_ref_tae$sound.files %in% test_files, ]
+
+```
+
+
+The detection parameters can be optimized using the function `optimize_energy_detector`. This function runs a detection for all possible combinations of tuning parameters. The code below tries three minimum duration and maximum duration values and two hold time values (which merges sounds within the specified time interval):
+
+```{r  optimize automated detection, eval = FALSE, echo = TRUE}
+
+opt_det_train <- optimize_energy_detector(
+  reference = train_ref, 
+  files = train_files, 
+  threshold = c(1, 5), 
+  hop.size = 11.6, 
+  smooth = c(5, 10), 
+  hold.time = c(0, 5), 
+  min.duration = c(5, 15, 25), 
+  max.duration = c(275, 300, 325), 
+  bp = c(0.5, 10),
+  path = data_path
+)
+
+```
+
+```{r, eval = FALSE, echo = FALSE}
+write.csv(opt_det_train , file = "./data/processed/taeniopygia/detection_optimization.csv")
+
+```
+
+The output (`opt_det_train`) shows the performance indices for each of those combinations. Hhere we show the 10 combinations with the highest F1 score:
+
+```{r, eval = FALSE, echo = TRUE}
+
+# subset with highest performance
+opt_det_train <- opt_det_train[order(opt_det_train$f.score, decreasing = TRUE), ]
+
+head(opt_det_train, 10)
+```
+
+```{r, eval = TRUE, echo = FALSE}
+
+opt_det_train <- read.csv(file.path(rootdir, "/data/processed/taeniopygia", "detection_optimization.csv"))
+
+# subset with highest performance
+sub_opt_det_train <- opt_det_train[order(opt_det_train$f.score, decreasing = TRUE), ]
+
+sub_opt_det_train <- sub_opt_det_train[1:10, c("threshold", "smooth", "hold.time", "min.duration", "max.duration", "true.positives", "false.positives",  "false.negatives", "recall", "precision", "f.score")]
+
+head(sub_opt_det_train, 10)
+```
+
+
+We now can use the tuning parameter values that yielded the best performance to detect sounds on the test data set:
+
+```{r, select best params, eval = FALSE, echo = TRUE}
+
+best_param <- opt_det_train[which.max(opt_det_train$f.score), ]
+
+det_test <- energy_detector(
+  files = test_files, 
+  threshold = best_param$threshold, 
+  hop.size = 11.6, 
+  smooth = best_param$smooth, 
+  hold.time = best_param$hold.time, 
+  min.duration = best_param$min.duration, 
+  max.duration = best_param$max.duration, 
+  bp = c(0.5, 10),
+  path = data_path, cores = 10 
+)
+```
+
+As our reference annotations include all sound files we can evaluate the performance of the detection on the test set as well:
+
+```{r , eval = TRUE, echo = FALSE}
+
+det_test <- read.csv(file.path(rootdir, "/data/processed/taeniopygia", "detection_test_data.csv"))
+
+```
+
+```{r, diagnose, eval = TRUE, echo = TRUE}
+
+diagnose_detection(reference = test_ref, detection = det_test, by.sound.file = FALSE)
+
+```
+&nbsp;
+
+The performance on the test data set was also acceptable with a F1 score of 0.95. Note that in the example we used a small subset of sound files for training. More training data might be needed for optimizing a detection routine on larger data sets or recordings with more variable sounds or background noise levels.
+
+
+Using macro averaging:
+
+```{r, diagnose 2, eval = TRUE, echo = TRUE}
+
+
+diagnose_detection(reference = test_ref,
+                   detection = det_test,
+                   by.sound.file = FALSE,
+                   macro.average = TRUE)
+
+```
+
+
+### Additional tools
+
+The *ohun* package offers additional tools to simplify sound event detection. Detected sounds can be labeled as false or true positives with the function 'label_detection'. This allows users to explore the structure of false positives and figure out ways to exclude them. The function 'filter_detections' can be used to remove ambiguous sounds (i.e. those labeled as split or merged detections) keeping only those that maximize a specific criterion (i.e. the highest template correlation). Finally, note that several templates representing the range of variation in signal structure can be used to detect semi-stereotyped sounds when running template-based detection ('template_detection' function). 
+
+## Discusion
+
+Here we have shown how to evaluate the performance of sound event detection routines using the package *ohun*. The package can evaluate detection outputs imported from other software, as well as its own detection routines. The latter can be iterated over combinations of tuning parameters in order to find those values that optimize detection. Despite signal detection indices being commonly reported when presenting new automatic detection methods, to our knowledge widely applicable performance evaluating routines have not been made available in a free, open source platform. Providing a common framework for the evaluation of sound event detection can simplify comparing the performance of different tools and the selection of those tools better suited to a given research question and study system. The tools offered by *ohun* for diagnosing detection performance should not be necessarily limited to acoustic data. *ohun* can also be used for cases in which the time of occurrence of discrete events needs to be identified such as detecting specific behaviors in video analysis of animal motor activity [*e.g.* @sturman2020; @hsu2021; @bohnslav2021]. The detection of such motor events in video can also be evaluated and optimized in comparison to a reference annotation, as we have shown above for acoustic signals.
+
+The *ohun* package provides two native detection methods: template-based and energy-based detection. Compared to new deep learning approaches for finding the occurrence of sound events, the two native methods are relatively simple tools. However, these methods have been widely used by the bioacoustic community [@avi2014; @Hafner2015; @mellinger2000; @Charif2010; @aide2013] and can reach adequate performance under the appropriate conditions, as we have shown in our two study cases and has been shown elsewhere [@knight2017]. Deep learning methods tend to require greater computational power, larger training data sets and, in some cases, more complex training routines. This might bring unnecessary difficulties when dealing with when less challenging detection tasks. Therefore the availability of a wide range of approaches can simplify finding the most appropriate tool for the intricacies of a study system and research goals, as well as having tools accessible for a broader community of researchers. The tools offered in *ohun* can also be used in a subsequent pipeline in which detected sounds are further classified using more elaborated discrimination algorithms [@balantic2020]. In addition, detection performance can be improved by using acoustic structure measurements that can be used to distinguish target from non-target sound events.
+
+Detection routines can take a long time when working with large amounts of acoustic data (e.g. large recordings and/or many files). We provide some additional tips that can help make a routine more time-efficient. 1. Always test procedures on small data subsets. Make sure that you obtain decent results on a small subset of recordings before trying to scale up the analysis. 2. Template-based detection is almost always faster than energy-based detection. 3. Run routines in parallel. Parallelization (i.e. the ability to distribute tasks over several cores in your computer) can significantly speed-up routines. All functions for automatic detection and performance evaluation allow users to run analysis in parallel (see `parallel` argument in those functions). Hence a computer with several cores can be helpful for improving efficiency. 4. Sampling rate matters. Detecting sounds on low sampling rate files is faster, so we must avoid having Nyquist frequencies much higher than the highest frequency of the target sounds. 5. Try using a computer with lots of RAM memory or a computer cluster for working on large amounts of data. Lastly, we underscore that these tips are not restricted to *ohun* and can also be helpful to speed up routines in other software packages. 
+
+There are some additional things to be considered when aiming to automatically detect sound events. When running energy-based detection routines try to use your knowledge about the signal structure to determine the initial range of tunning parameters. This can be extremely helpful for narrowing down possible parameter values. As a general rule, if human observers have a hard time detecting where a target sound occurs in a sound file, detection algorithms will likely yield low detection performance. In cases in which occurrences are ambiguous low performances are expected. Ensure reference annotations contain all target sounds and only the target sounds, otherwise performance optimization can be misleading as the performance of a given detection method cannot be better than the reference itself. Lastly, avoid having overlapping sounds or several sounds as a single detection (like a multi-syllable vocalization) in the reference annotation when running an energy-based detector, as they are likely to be identified as separated units.
+
+
+### Acknowledgements
+
+Nazareth Rojas, Silvia Chaves-Ramírez, Mariela Sánchez-Chavarría, Miriam Gioiosa, Cristian Castillo-Salazar, and José Pablo Barrantes for their help collecting acoustic data for Spix’s disc-winged bats and Jorge Elizondo for his help on manually annotating recordings. We also thank the Centro Biológico Hacienda Barú for their continuous support of our research and Mijail Rojas and Andrey Sequeira for support on early stages of package development. This study was partly funded by a CONARE-Max Planck grant from the Consejo Nacional de Rectores and the research activity C0754 at Centro de Investigación en Neurociencias, Universidad de Costa Rica. A.R-G. is supported by the Walt Halperin Endowed Professorship and the Washington Research Foundation as Distinguished Investigator.
+
+### Ethical note
+
+All sampling protocols followed guidelines approved by the American Society of Mammalogists for capture, handling and care of mammals [@Sikes2016] and the ASAB/ABS Guidelines for the use of animals in research. This study was conducted in accordance with the ethical standards for animal welfare of the Costa Rican Ministry of Environment and Energy, Sistema Nacional de Áreas de Conservación, permit no. SINAC-ACOPAC-RES-INV-008-2017 (Decree No. 32553-MINAE). Protocols were also approved by the University of Costa Rica’s Institutional Animal Care and Use Committee (CICUA-42-2018).
+
+### Supporting Information
+
+Supplementary information associated with this article is available in XXXXXXXXXXXXXXXXX
+
+## References

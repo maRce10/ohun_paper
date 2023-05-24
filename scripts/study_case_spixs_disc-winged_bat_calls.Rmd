@@ -1,8 +1,8 @@
 ---
-title: <center><font size="6"><b>Template-based automatic detection on Spix's disc-winged bat social calls</b></font></center>
-subtitle: <center><font size="4"><b>ohun</b></font></center>
-author: <center><font size="4"><a href="http://marceloarayasalas.weebly.com/">Marcelo Araya-Salas, PhD</a></font></center>
-date: <center>`r format(Sys.Date(), "%d-%m-%Y")`</center>
+title: <font size="6"><b>Template-based automatic detection on Spix's disc-winged bat social calls</b></font>
+subtitle: <font size="4"><b>ohun</b></font>
+author: <font size="4"><a href="http://marceloarayasalas.weebly.com/">Marcelo Araya-Salas, PhD</a></font>
+date:  "`r Sys.Date()`"
 output:
   html_document:
     toc: yes
@@ -41,7 +41,31 @@ The data used in this tutorial (annotations and recordings) can be downloaded fr
 
 ---
 
-### Load packages
+### Package installation
+
+Install/load the package from CRAN as follows:
+
+```{r, eval = FALSE}
+
+# From CRAN would be
+install.packages("ohun")
+
+#load package
+library(ohun)
+
+```
+
+To install the latest developmental version from [github](https://github.com/) you will need the R package [remotes](https://cran.r-project.org/package=remotes):
+
+```{r, eval = FALSE}
+remotes::install_github("maRce10/ohun")
+
+#load package
+library(ohun)
+
+```
+
+### Load additional packages
 ```{r packages, message = FALSE, warning = FALSE, echo = FALSE, eval = TRUE, message = FALSE, warning=FALSE}
 
 ## add 'developer/' to packages to be installed from github
@@ -75,10 +99,10 @@ opts_chunk$set( fig.width = 8, fig.height = 3.5)
 data_path <- "./data/raw/thyroptera/"
 
 source("~/Dropbox/R_package_testing/ohun/R/get_templates.R")
+source("~/Dropbox/R_package_testing/ohun/R/internal_functions.R")
 ```
 
 ```{r, message=FALSE, warning=FALSE}
-library(ohun)
 
 library(warbleR)
 
@@ -151,7 +175,7 @@ manual_ref <- read.csv(file.path(data_path, "manual_annotations_thyroptera.csv")
 
 ### Create spectrograms to explore vocalization structure
 
-This code creates a multipanel image with multiple spectrograms, one for each of the individuals/recordings in the complete data set
+This code creates a multipanel image with multiple spectrograms, one for each of the individuals/recordings in the complete data set (note that the output of the function `catalog` is a image file in the current working directory):
 ```{r Create catalogs, eval = FALSE}
 
 # select highest signal to noise ratio calls per individual
@@ -161,7 +185,7 @@ manual_ref_snr <- signal_2_noise(X = manual_ref, mar = 0.05)
 high_snr <- manual_ref_snr[ave(-manual_ref_snr$SNR, manual_ref_snr$sound.files, FUN = rank) <= 1, ]
 
 # create catalogs
-catalog(X = high_snr, flim = c(10, 45), nrow = 6, ncol = 5, ovlp = 90, height = 10, width = 20, same.time.scale = TRUE, mar = 0.005, wl = 512, gr = FALSE, spec.mar = 0, lab.mar = 0.001, rm.axes = TRUE, by.row = TRUE, box = FALSE, pal = viridis, collevels = seq(-100, 0, 5), labels = NULL)
+catalog(X = high_snr, flim = c(10, 45), nrow = 6, ncol = 5, ovlp = 90, height = 10, width = 20, same.time.scale = TRUE, mar = 0.005, wl = 512, gr = FALSE, spec.mar = 0, lab.mar = 0.001, rm.axes = TRUE, by.row = TRUE, box = FALSE, pal = viridis, collevels = seq(-100, 0, 5), labels = NULL, path = data_path)
 
 ```
 
@@ -171,12 +195,7 @@ catalog(X = high_snr[1:15, ], flim = c(10, 45), nrow = 3, ncol = 5, ovlp = 90, h
 
 ```
 
-
-```{r catalog, out.width = "100%", echo = FALSE, fig.align= "center"}
-
-knitr::include_graphics(normalizePath(file.path(data_path, "Catalog_p1.jpeg")))
-
-```
+![](../data/raw/thyroptera/Catalog_p1.jpeg)
 
 &nbsp;
 
@@ -197,12 +216,15 @@ test_ref <- manual_ref[manual_ref$sound.files %in% test_files, ]
 
 ### Get diverse set of templates
 ```{r get templates, eval = TRUE, echo = TRUE, fig.height=7}
+
 # find templates
 templates <- get_templates(train_ref, path = data_path,  bp = c(10, 50), fast = TRUE, ovlp = , wl = 200, n.sub.spaces = 3)
+
 ```
 
 
 ```{r get templates 2, eval = FALSE, echo = TRUE}
+
 # create ext. selection table
 templates_est <- selection_table(templates, extended = TRUE, confirm.extended = FALSE, path = data_path)
 
@@ -216,13 +238,13 @@ templates_est <- rename_est_waves(templates_est, new.sound.files = templates$tem
 ```{r Create catalog templates, eval = FALSE}
 
 # create catalogs
-catalog(X = templates_est, flim = c(10, 45), nrow = 2, ncol = 2, ovlp = 90, height = 10, width = 15, same.time.scale = TRUE, mar = 0.005, wl = 512, gr = FALSE, spec.mar = 0.4, lab.mar = 0.8, rm.axes = TRUE, by.row = TRUE, box = TRUE, pal = viridis, parallel = 10, collevels = seq(-100, 0, 5), img.prefix = "templates")
+catalog(X = templates_est, flim = c(10, 45), nrow = 2, ncol = 2, ovlp = 90, height = 10, width = 15, same.time.scale = TRUE, mar = 0.005, wl = 512, gr = FALSE, spec.mar = 0.4, lab.mar = 0.8, rm.axes = TRUE, by.row = TRUE, box = TRUE, pal = viridis, parallel = 10, collevels = seq(-100, 0, 5), img.prefix = "templates", path = data_path)
 
 ```
 
 ```{r catalog templates, out.width = "70%", echo = FALSE, fig.align= "center"}
 
-knitr::include_graphics(normalizePath(file.path(data_path, "templates-Catalog_p1.jpeg")))
+knitr::include_graphics("./data/raw/thyroptera/templates-Catalog_p1.jpeg")
 
 ```
 

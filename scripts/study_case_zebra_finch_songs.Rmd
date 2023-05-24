@@ -1,8 +1,8 @@
 ---
-title: <center><font size="6"><b>Energy-based automatic detection on zebra finch songs</b></font></center>
-subtitle: <center><font size="4"><b>ohun</b></font></center>
-author: <center><font size="4"><a href="http://marceloarayasalas.weebly.com/">Marcelo Araya-Salas, PhD</a></font></center>
-date: <center>`r format(Sys.Date(), "%d-%m-%Y")`</center>
+title: <font size="6"><b>Energy-based automatic detection on zebra finch songs</b></font>
+subtitle: <font size="4"><b>ohun</b></font>
+author: <font size="4"><a href="http://marceloarayasalas.weebly.com/">Marcelo Araya-Salas, PhD</a></font>
+date: "`r Sys.Date()`"
 output:
   html_document:
     toc: yes
@@ -54,7 +54,33 @@ figure_path <- "data/processed/taeniopygia/figures"
 
 ```
 
-### Load package
+
+### Package installation
+
+Install/load the package from CRAN as follows:
+
+```{r, eval = FALSE}
+
+# From CRAN would be
+install.packages("ohun")
+
+#load package
+library(ohun)
+
+```
+
+To install the latest developmental version from [github](https://github.com/) you will need the R package [remotes](https://cran.r-project.org/package=remotes):
+
+```{r, eval = FALSE}
+remotes::install_github("maRce10/ohun")
+
+#load package
+library(ohun)
+
+```
+
+
+### Load additional packages
 ```{r libraries, eval = TRUE, echo = FALSE, message=FALSE, warning=FALSE}
 
 x <- c("ohun", "Rraven", "warbleR", "pbapply", "remotes", "DT")
@@ -128,10 +154,11 @@ catalog(X = high_snr, flim = c(0, 11), nrow = 6, ncol = 3, ovlp = 90, height = 1
 
 ```{r catalog, out.width = "100%", echo = FALSE, fig.align= "center"}
 
-knitr::include_graphics(normalizePath(file.path(data_path, "Catalog_p1.jpeg")))
+# knitr::include_graphics(normalizePath(file.path(data_path, "Catalog_p1.jpeg")))
 
 ```
 
+![](../data/raw/taeniopygia/Catalog_p1.jpeg)
 &nbsp;
 
 ### Split reference annotations for training and testing detection
